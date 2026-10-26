@@ -62,7 +62,7 @@ jobs:
           curl -fsSL -o e2e-agent-binaries.zip \
             https://github.com/idrto/agent/releases/download/e2e-latest/e2e-agent-binaries.zip
           mkdir -p agent-dist
-          tar -xf e2e-agent-binaries.zip -C agent-dist
+          python -c "import zipfile; zipfile.ZipFile('e2e-agent-binaries.zip').extractall('agent-dist')"
           find agent-dist -type f | sort
 
       - uses: subosito/flutter-action@v2
