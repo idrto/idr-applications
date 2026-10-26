@@ -1,0 +1,12 @@
+name: idr_session
+description: Shared billing sign-in session for Source and Target.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  path: ^1.9.0
+  two_key_dart_sdk:
+    path: ../../../../Auth_repo/2key-billing-sdks/packages/dart

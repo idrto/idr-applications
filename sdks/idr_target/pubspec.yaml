@@ -1,0 +1,30 @@
+name: idr_target
+description: >-
+  Production Target Agent Dart SDK — auth, entity/host registration, entitlement
+  JWT, TLS certificate manager, and target-agent lifecycle facade.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  idr_session:
+    path: ../idr_session
+  flutter:
+    sdk: flutter
+  http: ^1.2.2
+  idr_dp_ffi:
+    path: ../../../../agents_engine/agent/packages/idr_dp_ffi
+  path: ^1.9.0
+  two_key_dart_sdk:
+    path: ../../../../Auth_repo/2key-billing-sdks/packages/dart
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  lints: ^4.0.0
+  test: ^1.25.0
+
+flutter:
+  uses-material-design: false

@@ -1,0 +1,17 @@
+name: idr_ollama
+description: Source-side Ollama chat helper over Target openStream (generic gateway).
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  idr_client:
+    path: ../../../../../../agents_engine/agent/packages/idr_client
+  idr_service_http:
+    path: ../idr_service_http
+
+dev_dependencies:
+  lints: ^4.0.0
+  test: ^1.25.0

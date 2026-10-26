@@ -1,0 +1,2 @@
+# Analysis options for idr_ollama
+include: package:lints/recommended.yaml

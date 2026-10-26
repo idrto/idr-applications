@@ -1,0 +1,26 @@
+name: idr_source
+description: Production Source SDK — billing SSO, Presence/WebRTC connect, Target services.
+version: 0.1.0
+publish_to: none
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+dependencies:
+  idr_session:
+    path: ../idr_session
+  two_key_dart_sdk:
+    path: ../../../../Auth_repo/2key-billing-sdks/packages/dart
+  idr_dp_ffi:
+    path: ../../../../agents_engine/agent/packages/idr_dp_ffi
+  idr_client:
+    path: ../../../../agents_engine/agent/packages/idr_client
+  idr_service_http:
+    path: packages/idr_service_http
+  idr_ollama:
+    path: packages/idr_ollama
+  idr_huggingface:
+    path: packages/idr_huggingface
+  path: ^1.9.0
+dev_dependencies:
+  http: ^1.2.0
+  lints: ^4.0.0
+  test: ^1.25.0

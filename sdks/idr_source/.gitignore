@@ -1,0 +1,30 @@
+# Dart / pub
+.dart_tool/
+.packages
+.pub/
+.pub-cache/
+build/
+pubspec.lock
+
+# Dartdoc
+doc/api/
+
+# Coverage
+coverage/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# IDE / OS
+.idea/
+.vscode/
+!.vscode/extensions.json
+.cursor/
+*.iml
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*~

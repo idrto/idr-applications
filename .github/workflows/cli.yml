@@ -1,0 +1,110 @@
+# Build `idr` and `idrt`, wrap them with native bits from
+# https://github.com/idrto/agent/releases/tag/e2e-latest (e2e branch).
+# Dart FFI packages come from idrto/agent@e2e — no cargo build here.
+#
+# Layout matches local monorepo paths (pubspec path: ../../../../…):
+#   applications/apps/     this repo
+#   agents_engine/agent/   idrto/agent@e2e
+#   Auth_repo/2key-billing-sdks/
+
+name: CLI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: cli-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.cli }} ${{ matrix.plat }}
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        cli: [idr, idrt]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            plat: linux-x64
+          - os: windows-latest
+            plat: windows-x64
+          - os: macos-latest
+            plat: macos-arm64
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: applications/apps
+
+      - uses: actions/checkout@v4
+        with:
+          repository: idrto/agent
+          ref: e2e
+          path: agents_engine/agent
+
+      - uses: actions/checkout@v4
+        with:
+          repository: 2keyapp/2key-billing-sdks
+          path: Auth_repo/2key-billing-sdks
+
+      - name: Fetch e2e agent binaries
+        run: |
+          set -euo pipefail
+          curl -fsSL -o e2e-agent-binaries.zip \
+            https://github.com/idrto/agent/releases/download/e2e-latest/e2e-agent-binaries.zip
+          mkdir -p agent-dist
+          tar -xf e2e-agent-binaries.zip -C agent-dist
+          find agent-dist -type f | sort
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Build ${{ matrix.cli }}
+        env:
+          CLI: ${{ matrix.cli }}
+          PLAT: ${{ matrix.plat }}
+        run: |
+          set -euo pipefail
+          if [[ "${CLI}" == idr ]]; then
+            pkg=applications/apps/idr_sources_cli
+            bin=bin/idr.dart
+          else
+            pkg=applications/apps/idr_target_cli
+            bin=bin/idrt.dart
+          fi
+          exe="${CLI}"
+          [[ "${RUNNER_OS}" == Windows ]] && exe="${CLI}.exe"
+
+          dart pub get --directory "${pkg}"
+          mkdir -p dist
+          dart compile exe "${pkg}/${bin}" -o "dist/${exe}"
+
+          if [[ "${CLI}" == idr ]]; then
+            src="agent-dist/source/${PLAT}"
+            shopt -s nullglob
+            cp -v "${src}"/*idr_c_api* dist/ || true
+            shopt -u nullglob
+          else
+            tgt="agent-dist/target/${PLAT}"
+            cp -v "${tgt}"/target-agent* dist/
+            chmod +x dist/target-agent 2>/dev/null || true
+          fi
+          ls -la dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.cli }}-${{ matrix.plat }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14
