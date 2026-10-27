@@ -52,6 +52,7 @@ Future<void> registerThisMachine(
   IdrBusinessPlan plan,
   String label, {
   bool? approveHere,
+  String? entityId,
 }) async {
   final host = label.trim().toLowerCase();
   final existing = target.registration;
@@ -59,14 +60,17 @@ Future<void> registerThisMachine(
     ui.info('Already registered as ${existing.verifiedFqhn}.');
     return;
   }
-  final check = await target.isHostAvailable(hostLabel: host);
+  final check = await target.isHostAvailable(
+    hostLabel: host,
+    entityId: entityId,
+  );
   if (!check.available) {
     throw CliError(
       CliExit.usage,
       '${check.verifiedFqhn} is taken. Pick another host name.',
     );
   }
-  final reg = await target.registerHost(label: host);
+  final reg = await target.registerHost(label: host, joinEntityId: entityId);
   if (isAdminMachine(target)) {
     await target.saveEnterpriseUiFlags(adminAlsoTarget: true);
   }

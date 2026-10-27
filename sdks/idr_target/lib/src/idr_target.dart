@@ -760,6 +760,7 @@ class IdrTarget {
   Future<IdrTargetRegistration> registerHost({
     required String label,
     String? payingPartyId,
+    String? joinEntityId,
   }) async {
     final session = _authSession;
     if (session == null) {
@@ -772,6 +773,7 @@ class IdrTarget {
         session: session,
         label: label,
         payingPartyId: payingPartyId,
+        joinEntityId: joinEntityId,
       );
       _registrationState = withEnroll;
       _publishState();

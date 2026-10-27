@@ -55,6 +55,14 @@ class ConnectCommand extends Command<int> {
               'local port': 'none (in-process streams, no tunnel)',
             });
             ui.info('');
+            if (s.services.isEmpty) {
+              ui.info('This Target offers no services to this device.');
+              ui.hint(
+                'Its policy may allow none, or Presence sent no verified '
+                'policy for this session (operator: PRESENCE_SERVICE_TOKEN).',
+              );
+              return;
+            }
             ui.table(
               ['service', 'kind'],
               [for (final svc in s.services) [svc.name, svc.kind]],

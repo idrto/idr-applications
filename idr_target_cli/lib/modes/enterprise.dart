@@ -197,8 +197,9 @@ String _policyText(Map<String, Object?> z) {
 Future<void> _registerInZone(
   IdrTarget target,
   String host,
-  String? zone,
-) async {
+  String? zone, {
+  String? entityId,
+}) async {
   final path = _zonePath(zone);
   if (path.isNotEmpty &&
       !target.enterpriseZones.any((z) => z.pathKey == path.join('.'))) {
@@ -208,7 +209,7 @@ Future<void> _registerInZone(
     );
   }
   final firstTime = target.registration == null;
-  await registerThisMachine(target, _plan, host);
+  await registerThisMachine(target, _plan, host, entityId: entityId);
   if (firstTime && target.registration != null) {
     await target.addEnterpriseDevice(label: host.trim(), zonePath: path);
   }
@@ -352,7 +353,14 @@ class _Setup extends Command<int> {
 /// `idrt enterprise register <host> [--zone fin.apac]`
 class _Register extends Command<int> {
   _Register() {
-    argParser.addOption('zone', help: 'Zone in the org graph, e.g. fin.apac.');
+    argParser
+      ..addOption('zone', help: 'Zone in the org graph, e.g. fin.apac.')
+      ..addOption(
+        'entity',
+        help:
+            'Join the owner entity (the owner sign-in email) instead of '
+            'your own. Needed when you are not the org owner.',
+      );
   }
 
   @override
@@ -371,7 +379,12 @@ class _Register extends Command<int> {
     );
     requireMode(target, _plan);
     await requireBilling(target, _plan);
-    await _registerInZone(target, host, argResults!['zone'] as String?);
+    await _registerInZone(
+      target,
+      host,
+      argResults!['zone'] as String?,
+      entityId: argResults!['entity'] as String?,
+    );
     return CliExit.ok;
   });
 }

@@ -38,33 +38,51 @@ class EnrollCommand extends Command<int> {
   @override
   Future<int> run() => withSource((source) async {
         requireSignedIn(source);
-        final org = (argResults!['org'] as String?)?.trim();
+        var org = (argResults!['org'] as String?)?.trim();
         String? boundOrg;
-        if (org != null && org.isNotEmpty) {
+        Future<void> bind(String slug) async {
           final bound = await ui.task(
-            'Binding to organization $org',
-            () => source.bindOrganization(org),
+            'Binding to organization $slug',
+            () => source.bindOrganization(slug),
             done: (b) => 'Bound to ${b.name} (${b.slug}) as ${b.role}.',
           );
           boundOrg = bound.slug;
           rememberOrg(knownOrgsFile, source.state.session!.email, bound.slug,
               bound.name);
         }
+
+        if (org != null && org.isNotEmpty) await bind(org);
         final fqhn = ui.ask(
           'Target FQHN (e.g. gpu-box--admin@acme.com)',
           value: argResults!.rest.firstOrNull ?? source.state.fqhn,
           flag: '<target-fqhn>',
         );
-        final String host;
+        String host;
+        Future<String> enrollOnce() => ui.task(
+              'Enrolling with $fqhn',
+              () => source.enroll(
+                fqhn: fqhn,
+                sourceLabel: argResults!['label'] as String?,
+              ),
+              done: (h) => 'Source device approved: $h',
+            );
         try {
-          host = await ui.task(
-            'Enrolling with $fqhn',
-            () => source.enroll(
-              fqhn: fqhn,
-              sourceLabel: argResults!['label'] as String?,
-            ),
-            done: (h) => 'Source device approved: $h',
-          );
+          try {
+            host = await enrollOnce();
+          } on IdrSourceException catch (e) {
+            // The Target's entity belongs to an organization this sign-in
+            // is not bound to: ask which one, then retry once.
+            if (!e.toString().contains('NOT_REGISTERED') &&
+                !e.message.contains('NOT_REGISTERED') ||
+                (org != null && org.isNotEmpty) ||
+                !ui.interactive) {
+              rethrow;
+            }
+            ui.hint('$fqhn belongs to an organization. Pick yours.');
+            org = pickOrg(knownOrgsFile, source.state.session!.email);
+            await bind(org);
+            host = await enrollOnce();
+          }
         } on IdrSourceException catch (e) {
           if (e.code != 'ENROLLMENT_PENDING') rethrow;
           // Not a failure: the admin hasn't decided yet.

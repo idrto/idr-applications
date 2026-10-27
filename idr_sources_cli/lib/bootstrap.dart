@@ -45,6 +45,13 @@ const _hints = <(String, String)>[
   ('NOT_REGISTERED', 'Rerun with --org <slug>.'),
   ('ENTITY_NOT_FOUND', 'The admin runs `idrt <mode> setup --role admin` first.'),
   (
+    'only serves verified',
+    'You are enrolled, but Presence sent no verified policy for this session. '
+        'Operator: Presence needs PRESENCE_SERVICE_TOKEN (same as billing) and '
+        '[auth].session_policy_url; its log shows "source_proof received but '
+        '... not configured" when it is missing. Then `idr disconnect` and retry.'
+  ),
+  (
     'policy_denied',
     'Your device or zone was revoked, or your zone allows no services. Ask '
         'the admin.'

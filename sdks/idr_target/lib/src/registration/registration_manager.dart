@@ -81,10 +81,24 @@ class RegistrationManager {
     required IdrAuthSession session,
     required String label,
     String? payingPartyId,
+    String? joinEntityId,
   }) async {
-    final entityId = await _client.ensureEmailEntity(session);
+    // Joining an existing entity (Enterprise Target, not the owner): the
+    // entity root belongs to the owner, so never kickstart it from here.
+    final join = joinEntityId?.trim().toLowerCase();
+    final entityId = join != null && join.isNotEmpty
+        ? join
+        : await _client.ensureEmailEntity(session);
     final crypto = _requireCrypto();
-    await _ensureAdminCa(session: session, entityId: entityId);
+    if (join == null || join.isEmpty) {
+      await _ensureAdminCa(session: session, entityId: entityId);
+    } else if (!await _enroll.entityExists(session: session, entityId: entityId)) {
+      throw IdrTargetException(
+        code: IdrTargetErrorCode.hostRejected,
+        message: 'Entity $entityId does not exist. The organization owner '
+            'must run `idrt enterprise setup --role admin` first.',
+      );
+    }
 
     var machine = await _identity.ensureMachineKey(
       crypto,

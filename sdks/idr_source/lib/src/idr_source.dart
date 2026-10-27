@@ -282,13 +282,7 @@ class IdrSource {
       await _prefs?.setLastFqhn(connectedFqhn);
 
       final catalog = await _connection.listNamedServiceCatalog();
-      var services = ServiceSelection.fromCatalogEntries(catalog);
-      if (services.isEmpty) {
-        services = [
-          ServiceSelection.ollama,
-          ServiceSelection.huggingface,
-        ];
-      }
+      final services = ServiceSelection.fromCatalogEntries(catalog);
 
       final preferred = ServiceSelection.named(
         services,

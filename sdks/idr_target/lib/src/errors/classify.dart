@@ -56,6 +56,26 @@ abstract final class IdrTargetErrors {
       );
     }
 
+    if (text.contains('owner_required')) {
+      return IdrTargetAttention(
+        code: context == 'host registration'
+            ? IdrTargetErrorCode.hostRejected
+            : fallbackCode,
+        message: 'Only the organization owner can set up the Enterprise '
+            'entity, and this account is not the owner. Join the owner entity: '
+            '`idrt enterprise register <host> --entity <owner-email>`. ($error)',
+      );
+    }
+
+    if (text.contains('entity_forbidden') || text.contains('entity_not_found')) {
+      return IdrTargetAttention(
+        code: fallbackCode,
+        message: 'The organization entity is not available to this account. '
+            'The owner must finish `idrt enterprise setup --role admin` first. '
+            '($error)',
+      );
+    }
+
     if (text.contains('hostconflict') ||
         text.contains('host conflict') ||
         text.contains('duplicate_host') ||
