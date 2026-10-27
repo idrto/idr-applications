@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:idr_target/src/auth/auth.dart';
 import 'package:idr_target/src/dp/identity_store.dart';
+import 'package:idr_target/src/errors.dart';
 import 'package:idr_target/src/registration/enroll_client.dart';
 import 'package:test/test.dart';
 
@@ -51,6 +52,23 @@ void main() {
       client.revokeCredential(session: session, ski: 'x'),
       throwsA(predicate(
           (e) => '$e'.contains('403') && '$e'.contains('Not an owner [FORBIDDEN]'))),
+    );
+  });
+
+  test('approve with no seats left is quotaExceeded (exit 4 in idrt)',
+      () async {
+    final client = EnrollClient(
+      controlPlaneUrl: 'http://cp.test',
+      httpClient: MockClient((_) async => http.Response(
+            jsonEncode({'code': 'device_seat_limit'}),
+            402,
+          )),
+    );
+    expect(
+      client.approve(
+          session: session, enrollId: 'e1', leafPem: 'l', chainPem: 'c'),
+      throwsA(isA<IdrTargetException>()
+          .having((e) => e.code, 'code', IdrTargetErrorCode.quotaExceeded)),
     );
   });
 

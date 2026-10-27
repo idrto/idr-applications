@@ -112,6 +112,8 @@ class EnrollmentRequest {
     this.subjectSki,
     this.publicJwk,
     this.status = EnrollmentRequestStatus.pending,
+    this.kind = 'machine_target',
+    this.target,
   });
 
   final String id;
@@ -127,6 +129,17 @@ class EnrollmentRequest {
   final String? subjectSki;
   final Map<String, dynamic>? publicJwk;
   EnrollmentRequestStatus status;
+
+  /// `machine_target`, `machine_source`, or `zone_authority` (a zone key
+  /// request: a zone admin's key, or a new sub-zone).
+  final String kind;
+
+  /// Source: the Target it enrolls for.
+  final String? target;
+
+  bool get isZoneKey => kind == 'zone_authority';
+
+  String? get zone => zonePath.isEmpty ? null : zonePath.join('.');
   CertSignKind? signedAs;
 
   bool get isPending => status == EnrollmentRequestStatus.pending;
@@ -142,7 +155,7 @@ class EnrollmentRequest {
     return EnrollmentRequest(
       id: (row['enrollId'] as String?) ?? (row['id'] as String?) ?? '',
       hostLabel: hostLabel.isNotEmpty ? hostLabel : 'device',
-      requesterEmail: (row['subjectSki'] as String?) ?? '',
+      requesterEmail: (row['requestedBy'] as String?) ?? '',
       csrPem: (row['csrPem'] as String?) ?? '',
       submittedAt: row['createdAt'] != null
           ? DateTime.tryParse(row['createdAt'].toString()) ?? DateTime.now()
@@ -155,6 +168,8 @@ class EnrollmentRequest {
       subjectSki: (row['ski'] as String?) ?? (row['subjectSki'] as String?),
       publicJwk:
           publicJwk is Map ? Map<String, dynamic>.from(publicJwk) : null,
+      kind: (row['kind'] as String?) ?? 'machine_target',
+      target: row['target'] as String?,
     );
   }
 }

@@ -174,35 +174,12 @@ class EnrollmentManager {
     String? payingPartyId,
     String? zone,
   }) async {
-    final admin = await _identity.loadAdminCa();
-    var ski = issuerSki ?? admin?['issuerSki'] as String?;
-    var priv = issuerPrivateJwk ??
-        (admin?['privateJwk'] is Map
-            ? Map<String, dynamic>.from(admin!['privateJwk'] as Map)
-            : null);
-    // Under a zone: the zone CA signs, and the chain runs leaf → zone → root.
-    String? issuerChainPem;
-    final zoneKey = zone?.trim().toLowerCase();
-    if (zoneKey != null && zoneKey.isNotEmpty) {
-      final zoneCa = await _identity.loadZoneCa(zoneKey);
-      if (zoneCa == null) {
-        throw IdrTargetException(
-          code: IdrTargetErrorCode.configMissing,
-          message: 'No certificate for zone $zoneKey on this machine. '
-              'Issue it first (zone authorities live on the root admin machine).',
-        );
-      }
-      ski = zoneCa['ski'] as String?;
-      priv = Map<String, dynamic>.from(zoneCa['privateJwk'] as Map);
-      issuerChainPem = zoneCa['chainPem'] as String?;
+    final asked = zone?.trim().toLowerCase();
+    if (asked != null &&
+        asked.isNotEmpty &&
+        await _identity.loadZoneCa(asked) == null) {
+      throw _noZoneKey(asked);
     }
-    if (ski == null || ski.isEmpty || priv == null) {
-      throw const IdrTargetException(
-        code: IdrTargetErrorCode.configMissing,
-        message: IdrTargetErrorMessages.configMissing,
-      );
-    }
-
     EnrollmentRequest? req = _findPending(enrollId);
     if (req == null) {
       await listPending(session: session, entityId: entityId);
@@ -212,6 +189,31 @@ class EnrollmentManager {
       throw const IdrTargetException(
         code: IdrTargetErrorCode.configMissing,
         message: 'Enrollment request not found.',
+      );
+    }
+    if (req.isZoneKey) return _approveZoneKey(session, req);
+
+    final admin = await _identity.loadAdminCa();
+    var ski = issuerSki ?? admin?['issuerSki'] as String?;
+    var priv = issuerPrivateJwk ??
+        (admin?['privateJwk'] is Map
+            ? Map<String, dynamic>.from(admin!['privateJwk'] as Map)
+            : null);
+    // Under a zone: the zone CA signs, and the chain runs leaf → zone → root.
+    // A request made into a zone is signed under that zone.
+    String? issuerChainPem;
+    final zoneKey = (zone ?? req.zone)?.trim().toLowerCase();
+    if (zoneKey != null && zoneKey.isNotEmpty) {
+      final zoneCa = await _identity.loadZoneCa(zoneKey);
+      if (zoneCa == null) throw _noZoneKey(zoneKey);
+      ski = zoneCa['ski'] as String?;
+      priv = Map<String, dynamic>.from(zoneCa['privateJwk'] as Map);
+      issuerChainPem = zoneCa['chainPem'] as String?;
+    }
+    if (ski == null || ski.isEmpty || priv == null) {
+      throw const IdrTargetException(
+        code: IdrTargetErrorCode.configMissing,
+        message: IdrTargetErrorMessages.configMissing,
       );
     }
 
@@ -260,6 +262,144 @@ class EnrollmentManager {
       payingPartyId: payingPartyId,
     );
     pending = pending.where((r) => r.id != enrollId).toList();
+  }
+
+  /// Root admin: sign a zone key request (a zone admin's key, or a new
+  /// sub-zone): a zone CA cert for the requester's key and a root-signed
+  /// `zone_authority` credential. An existing zone's admin key carries that
+  /// zone's current permissions.
+  Future<void> _approveZoneKey(
+    IdrAuthSession session,
+    EnrollmentRequest req,
+  ) async {
+    final zone = req.zone;
+    final publicJwk = req.publicJwk;
+    final ski = req.subjectSki;
+    if (zone == null || publicJwk == null || ski == null) {
+      throw const IdrTargetException(
+        code: IdrTargetErrorCode.configMissing,
+        message: 'This zone key request is incomplete; ask for a new one.',
+      );
+    }
+    final root = await _requireEnterpriseRoot();
+    final crypto = _requireCrypto();
+    final certPem = crypto.signIntermediateCa(
+      childPublicJwk: publicJwk,
+      childCommonName: ski,
+      parentPrivateJwk: root.privateJwk,
+      parentCommonName: root.root['commonName'] as String? ?? root.ski,
+    );
+    final record = (await _enroll.listDelegates(session: session))
+        .where((z) => z['zone'] == zone)
+        .firstOrNull?['credential'];
+    final credential = _signedCredential(
+      crypto: crypto,
+      issuerPrivatePem: ed25519Pkcs8PemFromPrivateJwk(root.privateJwk),
+      kind: 'zone_authority',
+      entityId: root.entityId,
+      ski: ski,
+      publicJwk: publicJwk,
+      issuerSki: root.ski,
+      package: 'enterprise',
+      permissions: record is Map
+          ? [
+              for (final p in (record['permissions'] as List? ?? const [])
+                  .cast<Map>())
+                Map<String, dynamic>.from(p),
+            ]
+          : _zonePermissions(root.entityId, zone),
+      zone: zone,
+    );
+    await _enroll.approve(
+      session: session,
+      enrollId: req.id,
+      leafPem: certPem,
+      chainPem: '${certPem.trim()}\n${root.certPem.trim()}\n',
+      credential: credential,
+      issuerSki: root.ski,
+    );
+    pending = pending.where((r) => r.id != req.id).toList();
+  }
+
+  /// Zone admin (or sub-zone creator): make a zone key here and ask the root
+  /// admin to sign it. The private key never leaves this machine. Returns
+  /// `approved` (already signed), or `pending`.
+  Future<String> requestZoneKey({
+    required IdrAuthSession session,
+    required String entityId,
+    required String zone,
+  }) async {
+    final key = zone.trim().toLowerCase();
+    if (await _identity.loadZoneCa(key) != null) return 'approved';
+    if ((await _identity.loadZoneKeyRequests()).containsKey(key)) {
+      final status = await pullZoneKey(key);
+      if (status != 'rejected') return status;
+    }
+    final crypto = _requireCrypto();
+    final keys = crypto.generateEd25519();
+    final ski = crypto.ski(keys.publicB64url);
+    final created = await _enroll.create(
+      session: session,
+      entityId: entityId,
+      csrPem: crypto.buildCsr(
+        privatePem: keys.privatePem,
+        fqhn: '$key.zone--$entityId',
+      ),
+      publicJwk: keys.publicJwk,
+      kind: 'zone_authority',
+      subjectSki: ski,
+      zone: key,
+    );
+    await _identity.saveZoneKeyRequest(key, {
+      'ski': created['subjectSki'] ?? ski,
+      'privateJwk': ed25519PrivateJwk(
+        privatePem: keys.privatePem,
+        publicJwk: keys.publicJwk,
+      ),
+      'pullToken': created['pullToken'],
+      'enrollId': created['enrollId'],
+    });
+    return 'pending';
+  }
+
+  /// Zone keys asked for here and not signed yet.
+  Future<List<String>> zoneKeyRequests() async =>
+      (await _identity.loadZoneKeyRequests()).keys.toList()..sort();
+
+  /// Fetch a requested zone key once the root signed it: `approved` (now
+  /// usable here), `rejected` (request dropped), `pending`, or `none`.
+  Future<String> pullZoneKey(String zone) async {
+    final asked = (await _identity.loadZoneKeyRequests())[zone];
+    if (asked == null) {
+      return await _identity.loadZoneCa(zone) != null ? 'approved' : 'none';
+    }
+    final Map<String, dynamic> pulled;
+    try {
+      pulled = await _enroll.pull(pullToken: asked['pullToken'] as String);
+    } catch (e) {
+      idrLog('zone key pull: $e');
+      return 'pending';
+    }
+    switch (pulled['status']) {
+      case 'rejected':
+        await _identity.saveZoneKeyRequest(zone, null);
+        return 'rejected';
+      case 'approved':
+        final certPem = pulled['certPem'] as String?;
+        if (certPem == null) return 'pending';
+        await _identity.saveZoneCa(zone, {
+          'ski': pulled['ski'] ?? asked['ski'],
+          'privateJwk': asked['privateJwk'],
+          'certPem': certPem,
+          'chainPem': pulled['chainPem'] as String? ?? certPem,
+          'deviceId': asked['enrollId'],
+          'issuedAt': DateTime.now().toUtc().toIso8601String(),
+        });
+        await _identity.saveZoneKeyRequest(zone, null);
+        return 'approved';
+      default:
+        return 'pending';
+    }
   }
 
   /// Root admin: issue a zone CA under the enterprise root and register it.
@@ -635,6 +775,12 @@ class EnrollmentManager {
     await _registration.save(cleared);
     return cleared;
   }
+
+  static IdrTargetException _noZoneKey(String zone) => IdrTargetException(
+        code: IdrTargetErrorCode.configMissing,
+        message: 'No key for zone $zone on this machine. The root admin '
+            'machine issues zones; a zone admin gets its key at setup.',
+      );
 
   EnrollmentRequest? _findPending(String enrollId) {
     for (final r in pending) {

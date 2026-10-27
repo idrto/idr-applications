@@ -56,6 +56,7 @@ class RegistrationManager {
     required IdrAuthSession session,
     required String hostLabel,
     String? entityId,
+    String? zone,
   }) async {
     final label = hostLabel.trim().toLowerCase();
     if (label.isEmpty || label.contains('--')) {
@@ -69,6 +70,7 @@ class RegistrationManager {
       session: session,
       entityId: eid,
       hostLabel: label,
+      zone: zone,
     );
     return (available: r.available, verifiedFqhn: r.verifiedFqhn);
   }
@@ -82,6 +84,7 @@ class RegistrationManager {
     required String label,
     String? payingPartyId,
     String? joinEntityId,
+    String? zone,
   }) async {
     // Joining an existing entity (Enterprise Target, not the owner): the
     // entity root belongs to the owner, so never kickstart it from here.
@@ -115,6 +118,7 @@ class RegistrationManager {
         machineSki: ski,
         payingPartyId: payingPartyId,
         publicJwkJson: jsonEncode(machine.publicJwk),
+        zone: zone,
       );
     } catch (e) {
       if (!isMachineSkiConflict(e)) rethrow;
@@ -128,23 +132,36 @@ class RegistrationManager {
         machineSki: ski,
         payingPartyId: payingPartyId,
         publicJwkJson: jsonEncode(machine.publicJwk),
+        zone: zone,
       );
     }
 
-    final csrPem = crypto.buildCsr(
-      privatePem: machine.privatePem,
-      fqhn: reg.verifiedFqhn,
-    );
-
-    final enroll = await _enroll.create(
+    Future<Map<String, dynamic>> enrollCreate() => _enroll.create(
       session: session,
       entityId: entityId,
       host: reg.verifiedFqhn,
-      csrPem: csrPem,
+      csrPem: crypto.buildCsr(
+        privatePem: machine.privatePem,
+        fqhn: reg.verifiedFqhn,
+      ),
       publicJwk: machine.publicJwk,
       kind: 'machine_target',
       subjectSki: ski,
+      zone: zone,
     );
+
+    Map<String, dynamic> enroll;
+    try {
+      enroll = await enrollCreate();
+    } catch (e) {
+      // Re-registering under a new name (e.g. now with its zone): this key
+      // already backs the old device. A new name gets a new key.
+      if (!isMachineSkiConflict(e)) rethrow;
+      idrLog('enroll-create SKI conflict — rotating machine key');
+      machine = await _identity.rotateMachineKey(crypto);
+      ski = crypto.ski(machine.publicB64url);
+      enroll = await enrollCreate();
+    }
     final pullToken = enroll['pullToken'] as String?;
 
     final credential = <String, dynamic>{

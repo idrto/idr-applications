@@ -15,8 +15,8 @@ Related user docs: [idrt Enterprise](../idr_target_cli/README.md#registration-en
 | Entity identity | Email **or** unique name (brand/domain); DNS proof later | Kickstart `entityId` defaults to **session email**. Any unused string can be passed, but CLI does not offer a named-entity option. No domain/brand verification. |
 | Entity FQHN | e.g. `acme.idr.to` | Entity is **not** a Presence Target. Connectable names are machines: `{host}--{entity}.idr.to`. |
 | Zone FQHN | e.g. `fin.acme.idr.to` | Zone is a **path key** (`fin`, `fin.apac`) + zone CA. Not registered with Presence. |
-| Zone admin | Holds zone CA; reviews/signs CSRs for that zone | Zone CA keys stay on the **root admin machine**. `zone invite` stores a **local email** only (`remoteSyncAvailable == false`). |
-| Source zone selection | Path A (no zone → root inbox) and Path B (pick zone → zone admin) | Source cannot pass a zone. `idr enroll` has no `--zone`. Admin chooses zone at **approve**. Inbox is entity-wide. |
+| Zone admin | Holds zone CA; reviews/signs CSRs for that zone | **Implemented (2026-10-27).** `zone invite` sets the role on billing; the zone admin's machine holds its own root-signed zone key and approves only its zone. |
+| Source zone selection | Path A (no zone → root inbox) and Path B (pick zone → zone admin) | Both: no `--zone` → owner's inbox, zone picked at approve; `idr enroll --zone fin` → fin's admins (and owner). |
 | Host uniqueness | Unique **per zone** | Unique **per entity** (`machine_seats` `entity_id` + `host`). |
 | Machine FQHN | Distinct per zone so `gpu-box` can repeat | Live: `{label}--{entityId}.idr.to` with `entityId` usually email. Zone not in the name. |
 
@@ -305,8 +305,8 @@ idrt enterprise approve <id> --zone fin     # current Path-B substitute: root si
 
 1. Named entity (brand/domain) as a **supported** setup option with uniqueness UX.
 2. Entity/zone as Presence FQHNs (`acme.idr.to`, `fin.acme.idr.to`).
-3. Zone admin as a **signing** principal (CA on their machine or delegated sign).
-4. Source `--zone` / Path B inbox routing.
+3. ~~Zone admin as a **signing** principal~~ Done 2026-10-27: the zone admin's machine makes its own zone key; the root signs it from Pending approvals (`zone_authority` enroll). Zone roles (admin/member) and settings (`membersApprove`, `adminsCreateSubzones`) live on billing (zone record metadata). See `docs/e2e-multi-user-cli.md` TC5.
+4. ~~Source `--zone` / Path B inbox routing~~ Done 2026-10-27: `idr enroll --zone`; the request goes to that zone's admins (and the owner).
 5. Post-approve **move** to a zone (Path A step 4).
 6. Host uniqueness **per zone**; dotted `{label}.{zone}--{entity}` as the live `hostLabel`.
 7. Domain/brand **ownership** verification for entity names.

@@ -227,9 +227,14 @@ abstract final class IdrTargetErrors {
       );
     }
 
+    // Say what billing said when it said something.
+    final server = RegExp(r'"error"\s*:\s*"([^"]+)"').firstMatch('$error');
     return IdrTargetAttention(
       code: fallbackCode,
-      message: IdrTargetErrorMessages.unexpected(context),
+      message: server == null
+          ? IdrTargetErrorMessages.unexpected(context)
+          : '${IdrTargetErrorMessages.unexpected(context)} '
+                '(billing: ${server.group(1)})',
     );
   }
 

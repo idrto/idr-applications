@@ -3,6 +3,7 @@
 import 'package:http/http.dart' as http;
 
 import '../auth/auth.dart';
+import '../errors.dart';
 
 /// Better Auth DP enroll CSR inbox on the control plane.
 class EnrollClient {
@@ -87,26 +88,30 @@ class EnrollClient {
   Future<Map<String, dynamic>> create({
     required IdrAuthSession session,
     required String entityId,
-    required String host,
+    String? host,
     required String csrPem,
     required Map<String, dynamic> publicJwk,
     String kind = 'machine_target',
     String? subjectSki,
+    String? zone,
   }) async {
     final res = await _http.post(
       Uri.parse('$_base/api/auth/delegate-permissions/enroll-create'),
       headers: _headers(session, jsonBody: true),
       body: jsonEncode({
         'entityId': entityId,
-        'host': host,
+        if (host != null) 'host': host,
         'kind': kind,
         'csrPem': csrPem,
         'publicJwk': publicJwk,
         if (subjectSki != null) 'subjectSki': subjectSki,
+        if (zone != null) 'zone': zone,
       }),
     );
     if (res.statusCode < 200 || res.statusCode >= 300) {
-      throw StateError('enroll-create failed (${res.statusCode}): ${res.body}');
+      throw StateError(
+        'enroll-create failed (${res.statusCode}): ${_serverMessage(res)}',
+      );
     }
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
@@ -123,7 +128,9 @@ class EnrollClient {
     });
     final res = await _http.get(uri, headers: _headers(session));
     if (res.statusCode < 200 || res.statusCode >= 300) {
-      throw StateError('enroll-list failed (${res.statusCode}): ${res.body}');
+      throw StateError(
+        'enroll-list failed (${res.statusCode}): ${_serverMessage(res)}',
+      );
     }
     final body = jsonDecode(res.body) as Map<String, dynamic>;
     final list = body['enrollments'] as List? ?? const [];
@@ -153,8 +160,13 @@ class EnrollClient {
         if (payingPartyId != null) 'payingPartyId': payingPartyId,
       }),
     );
+    if (res.body.contains('device_seat_limit')) {
+      throw IdrTargetException.forCode(IdrTargetErrorCode.quotaExceeded);
+    }
     if (res.statusCode < 200 || res.statusCode >= 300) {
-      throw StateError('enroll-approve failed (${res.statusCode}): ${res.body}');
+      throw StateError(
+        'enroll-approve failed (${res.statusCode}): ${_serverMessage(res)}',
+      );
     }
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
@@ -280,6 +292,87 @@ class EnrollClient {
     final data = body['data'] as Map? ?? body;
     final list = data['credentials'] as List? ?? const [];
     return [for (final c in list) Map<String, dynamic>.from(c as Map)];
+  }
+
+  /// The caller's zones: `{owner, entityId, zones: [{zone, exists, role,
+  /// membersApprove, adminsCreateSubzones, key: {ski, status}?}]}`.
+  Future<Map<String, dynamic>> myZones({
+    required IdrAuthSession session,
+  }) async {
+    final res = await _http.get(
+      Uri.parse('$_base/api/auth/delegate-permissions/my-zones'),
+      headers: _headers(session),
+    );
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw StateError(
+        'my-zones failed (${res.statusCode}): ${_serverMessage(res)}',
+      );
+    }
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  /// Give [email] a role in [zone] (`admin`, `member`, `none`; null = admin
+  /// when the zone has none yet, else member).
+  Future<Map<String, dynamic>> setZoneRole({
+    required IdrAuthSession session,
+    required String zone,
+    required String email,
+    String? role,
+  }) =>
+      _postJson(session, 'zone-role', {
+        'zone': zone,
+        'email': email,
+        if (role != null) 'role': role,
+      });
+
+  Future<Map<String, dynamic>> setZoneSettings({
+    required IdrAuthSession session,
+    required String zone,
+    bool? membersApprove,
+    bool? adminsCreateSubzones,
+  }) =>
+      _postJson(session, 'zone-settings', {
+        'zone': zone,
+        if (membersApprove != null) 'membersApprove': membersApprove,
+        if (adminsCreateSubzones != null)
+          'adminsCreateSubzones': adminsCreateSubzones,
+      });
+
+  /// Block (or unblock) one Source ([source]: SKI or host) on one Target.
+  Future<Map<String, dynamic>> setTargetBlock({
+    required IdrAuthSession session,
+    required String target,
+    required String source,
+    required bool blocked,
+  }) =>
+      _postJson(session, 'target-block', {
+        'target': target,
+        'source': source,
+        'blocked': blocked,
+      });
+
+  Future<Map<String, dynamic>> _postJson(
+    IdrAuthSession session,
+    String path,
+    Map<String, dynamic> body,
+  ) async {
+    Future<http.Response> send() => _http.post(
+      Uri.parse('$_base/api/auth/delegate-permissions/$path'),
+      headers: _headers(session, jsonBody: true),
+      body: jsonEncode(body),
+    );
+    http.Response res;
+    try {
+      res = await send();
+    } on http.ClientException {
+      // A kept-alive socket the server closed while the user sat on a
+      // prompt fails the write. These calls are idempotent: send once more.
+      res = await send();
+    }
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw StateError('$path failed (${res.statusCode}): ${_serverMessage(res)}');
+    }
+    return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
   /// `error` (+ `code`) from a billing error body, else the raw body.

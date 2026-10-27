@@ -40,7 +40,7 @@ abstract final class IdrTargetErrorMessages {
   static const entitlementRevoked =
       'Your entitlement was revoked. Contact your admin.';
   static const quotaExceeded =
-      'This plan has no remaining device seats. Buy another bundle, then register this host again.';
+      'This plan has no remaining device seats. Buy another seat bundle, then try again.';
 
   static const billingRequired =
       'A valid billing entitlement is required to continue.';

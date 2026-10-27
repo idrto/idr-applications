@@ -4,6 +4,8 @@ import 'package:idr_target/idr_target.dart';
 import 'package:idr_cli_core/idr_cli_core.dart';
 import 'package:path/path.dart' as p;
 
+import 'zones.dart';
+
 String _env(String key, String fallback) {
   final v = Platform.environment[key]?.trim();
   return v == null || v.isEmpty ? fallback : v;
@@ -48,7 +50,7 @@ String? resolveAgentBinary() {
         .split(Platform.isWindows ? ';' : ':')
         .where((d) => d.isNotEmpty),
   ];
-  for (var dir = Directory.current;; dir = dir.parent) {
+  for (var dir = Directory.current; ; dir = dir.parent) {
     for (final profile in const ['release', 'debug']) {
       dirs.add(p.join(dir.path, 'agents_engine', 'agent', 'target', profile));
     }
@@ -64,8 +66,9 @@ String? resolveAgentBinary() {
 IdrTarget createTarget() {
   return IdrTarget(
     config: IdrTargetConfig(
-      controlPlaneUrl:
-          Uri.parse(_env('IDR_CONTROL_PLANE_URL', 'http://127.0.0.1:3000')),
+      controlPlaneUrl: Uri.parse(
+        _env('IDR_CONTROL_PLANE_URL', 'http://127.0.0.1:3000'),
+      ),
       agentBinaryPath: resolveAgentBinary() ?? agentBinaryName,
       mode: _isDev ? IdrTargetMode.development : IdrTargetMode.production,
     ),
@@ -90,27 +93,32 @@ Future<CliOrg?> loadOrg() async {
 
 /// Binds this machine to [org] and remembers it for [email]'s org picker.
 Future<void> saveOrg(CliOrg org, String email) async {
-  await cliStore.writeJson(
-    _orgKey,
-    {'slug': org.slug, 'name': org.name, 'role': org.role},
-  );
+  await cliStore.writeJson(_orgKey, {
+    'slug': org.slug,
+    'name': org.name,
+    'role': org.role,
+  });
   rememberOrg(knownOrgsFile, email, org.slug, org.name);
 }
 
 /// Organizations this machine bound before (billing doesn't list them).
 File get knownOrgsFile => File(p.join(cliDirectory.path, 'orgs.json'));
 
-Future<void> clearOrg() => cliStore.deleteSecret(_orgKey);
+/// Unbinds the org (and the zone picked in it).
+Future<void> clearOrg() async {
+  await cliStore.deleteSecret(_orgKey);
+  await clearZoneContext();
+}
 
 /// Billing slugs are names, domains or emails, never blank or spaced; the
 /// personal account has its own mode. Membership is billing's call.
 String? orgSlugProblem(String slug) => RegExp(r'\s').hasMatch(slug)
     ? 'An organization slug has no spaces (e.g. acme or acme.com); copy it '
-        'from the billing portal.'
+          'from the billing portal.'
     : slug == 'me' || slug == 'personal'
-        ? 'That is your personal account: use Personal setup '
-            '(`idrt personal setup`).'
-        : null;
+    ? 'That is your personal account: use Personal setup '
+          '(`idrt personal setup`).'
+    : null;
 
 /// Org `owner` / `admin` can buy and register hosts; `member` cannot.
 bool canBill(String role) => role == 'owner' || role == 'admin';

@@ -37,11 +37,20 @@ void writeAttention(IdrSource source) {
 const _hints = <(String, String)>[
   (
     'ENROLLMENT_PENDING',
-    'Ask the Target admin to approve it (`idrt <mode> pending` / `approve '
-        '<id>`), then rerun `idr enroll`.'
+    'Ask the Target admin to approve it: `idrt` > Pending approvals (or '
+        '`idrt enterprise pending`, then `idrt enterprise approve <id>`). '
+        'Then rerun `idr enroll`.'
   ),
   ('ENROLLMENT_REJECTED', 'Run `idr enroll` again if that was a mistake.'),
   ('not a member', 'The org owner adds you under Members in the billing portal.'),
+  (
+    'ZONE_MISMATCH',
+    "The Target's name says its zone. Leave out --zone, or use that zone.",
+  ),
+  (
+    'ZONE_NOT_FOUND',
+    'Ask the zone admin for the exact zone name, or leave out --zone.'
+  ),
   ('NOT_REGISTERED', 'Rerun with --org <slug>.'),
   ('ENTITY_NOT_FOUND', 'The admin runs `idrt <mode> setup --role admin` first.'),
   (
@@ -102,7 +111,8 @@ CliError? translateSourceError(Object e) {
     _ when text.contains('401') || e.code.startsWith('AUTH') => CliExit.auth,
     _ when text.contains('Failed to load dynamic library') => CliExit.config,
     'LIBRARY_MISSING' || 'CRYPTO_UNAVAILABLE' => CliExit.config,
-    'SERVICE_REQUIRED' || 'MODEL_REQUIRED' => CliExit.usage,
+    'SERVICE_REQUIRED' || 'MODEL_REQUIRED' || 'ZONE_NOT_FOUND' || 'ZONE_MISMATCH' =>
+      CliExit.usage,
     _ when text.contains('Cannot derive entity') => CliExit.usage,
     'ACTIVATE_FAILED' ||
     'MODELS_FAILED' ||

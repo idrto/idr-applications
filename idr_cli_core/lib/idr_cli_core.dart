@@ -255,6 +255,33 @@ class Ui {
       ? _logger.confirm(question, defaultValue: defaultValue)
       : defaultValue;
 
+  /// Picks any of [options] (space toggles, enter confirms); a usage error
+  /// naming [flag] when not interactive.
+  List<T> chooseMany<T extends Object>(
+    String label,
+    List<T> options, {
+    required String flag,
+    String Function(T)? display,
+  }) {
+    if (!interactive || options.isEmpty) {
+      throw CliError(
+        CliExit.usage,
+        'Missing $flag.',
+        hint: options.isEmpty
+            ? null
+            : 'Choose from: ${options.map(display ?? (o) => '$o').join(', ')}',
+        code: 'MISSING_ARGUMENT',
+      );
+    }
+    return TerminalOverrides.runZoned(
+      () => _logger.chooseAny(label, choices: options, display: display),
+      exit: (code) {
+        stdout.write('\x1B[?25h');
+        exit(code);
+      },
+    );
+  }
+
   /// Picks one of [options] interactively; a usage error naming [flag] otherwise.
   T choose<T extends Object>(
     String label,

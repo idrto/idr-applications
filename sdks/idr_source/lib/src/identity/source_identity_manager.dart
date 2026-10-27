@@ -46,9 +46,13 @@ class SourceIdentityManager {
   ///
   /// Idempotent: a pending enroll for the same entity is polled, an approved one
   /// is returned. Throws `ENROLLMENT_PENDING` if the Admin has not approved yet.
+  ///
+  /// [zone]: ask to join that zone; its admin approves, and the Source then
+  /// follows the zone's policy.
   Future<String> enroll({
     required String targetFqhn,
     String? sourceLabel,
+    String? zone,
     Duration pullTimeout = const Duration(seconds: 10),
   }) async {
     final entityId = entityIdFromFqhn(targetFqhn);
@@ -80,8 +84,24 @@ class SourceIdentityManager {
           csrPem: csr,
           publicJwk: keys.publicJwk,
           subjectSki: keys.ski,
+          zone: zone,
+          target: targetFqhn,
         );
       } on MachineAuthnException catch (e) {
+        if (e.body.contains('ZONE_MISMATCH')) {
+          throw IdrSourceException(
+            code: 'ZONE_MISMATCH',
+            message: 'Source enroll refused: ${_serverError(e.body)}.',
+            cause: e,
+          );
+        }
+        if (zone != null && e.statusCode == 404) {
+          throw IdrSourceException(
+            code: 'ZONE_NOT_FOUND',
+            message: 'Zone $zone does not exist in this organization.',
+            cause: e,
+          );
+        }
         throw IdrSourceException(
           code: e.statusCode == 404 ? 'ENTITY_NOT_FOUND' : 'ENROLL_FAILED',
           message: 'Source enroll failed (${e.statusCode}): ${e.body}',
@@ -178,6 +198,16 @@ class SourceIdentityManager {
       return rest.substring(0, rest.length - '.idr.to'.length);
     }
     return rest;
+  }
+
+  static String _serverError(String body) =>
+      RegExp(r'"error"\s*:\s*"([^"]+)"').firstMatch(body)?.group(1) ?? body;
+
+  /// `laptop.fin--a@b.idr.to` → `fin`; a Target at the org root → null.
+  static String? zoneFromFqhn(String fqhn) {
+    final left = fqhn.trim().toLowerCase().split('--').first;
+    final dot = left.indexOf('.');
+    return dot < 0 ? null : left.substring(dot + 1);
   }
 
   static String _hostLabel(String raw) {

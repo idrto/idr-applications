@@ -15,9 +15,9 @@ import 'target.dart';
       // Service Provider: same pages, bound to the tenant's billing org;
       // quantity on /shop is the number of Target seats.
       IdrBusinessPlan() => (
-          subscribe: '/shop/${plan.planCode}',
-          manage: '/subscriptions'
-        ),
+        subscribe: '/shop/${plan.planCode}',
+        manage: '/subscriptions',
+      ),
     };
 
 /// Attention codes that mean "fix it in the billing portal".
@@ -73,10 +73,14 @@ Future<void> requireBilling(
   IdrTarget target,
   IdrBusinessPlan plan, {
   bool open = true,
+  bool allowMembers = false,
 }) async {
   if (isCovered(target, plan)) return;
   // Org members cannot see or buy the org's subscription (server 403s).
   final org = await loadOrg();
+  // Zone admins and members register and approve on the org's plan;
+  // billing refuses there if it lapsed or has no seat left.
+  if (allowMembers && org != null && !canBill(org.role)) return;
   if (org != null && !canBill(org.role)) {
     throw CliError(
       CliExit.billing,
@@ -84,9 +88,7 @@ Future<void> requireBilling(
       'your role is ${org.role}.',
     );
   }
-  ui.info(
-    'No active ${plan.title} subscription (missing or expired).',
-  );
+  ui.info('No active ${plan.title} subscription (missing or expired).');
   await openPortal(target, portalPaths(plan).subscribe, open: open);
   throw const CliError(
     CliExit.billing,
@@ -94,7 +96,7 @@ Future<void> requireBilling(
   );
 }
 
-IdrBusinessPlan _planFromArgs(IdrTarget target, String? flag) {
+Future<IdrBusinessPlan> _planFromArgs(IdrTarget target, String? flag) async {
   final plan = switch (flag) {
     'personal' => IdrBusinessPlan.personal,
     'enterprise' => IdrBusinessPlan.enterprise,
@@ -104,8 +106,24 @@ IdrBusinessPlan _planFromArgs(IdrTarget target, String? flag) {
   if (plan == null) {
     throw const CliError(
       CliExit.usage,
-      'No mode chosen yet. Run `idrt personal setup` / '
-      '`idrt enterprise setup` / `idrt provider setup`, or pass --plan.',
+      'No mode chosen yet.',
+      hint:
+          'Run setup first; it opens checkout when needed: '
+          '`idrt enterprise setup --org <slug> --role admin` '
+          '(or `idrt personal setup` / `idrt provider setup`).',
+      code: 'MODE_REQUIRED',
+    );
+  }
+  // Without a bound org the portal would bill the personal account.
+  if (plan == IdrBusinessPlan.enterprise && await loadOrg() == null) {
+    throw const CliError(
+      CliExit.usage,
+      'This machine is not bound to an organization, so there is no '
+      'Enterprise subscription to buy or show.',
+      hint:
+          'Run `idrt enterprise setup --org <slug> --role admin`; it opens '
+          'checkout for that org.',
+      code: 'ORG_REQUIRED',
     );
   }
   return plan;
@@ -145,39 +163,39 @@ class BillingCommand extends Command<int> {
 
   @override
   Future<int> run() => withTarget((target) async {
-        requireSession(target);
-        final plan = _planFromArgs(target, argResults!['plan'] as String?);
-        final covered = isCovered(target, plan);
-        final org = await loadOrg();
-        final statusOnly = argResults!['status'] as bool;
-        void human() {
-          ui.fields({
-            'plan': '${plan.title} (${plan.planCode})',
-            if (org != null)
-              'paid by': '${org.name} (${org.slug}), you are ${org.role}',
-            'subscription': covered ? 'active' : 'missing or expired',
-          });
-          printAttention(target);
-        }
-
-        final data = {
-          'plan': plan.planCode,
-          'paidBy': org?.slug,
-          'subscriptionActive': covered,
-        };
-        if (statusOnly) {
-          ui.result(data, human: human);
-          return covered ? CliExit.ok : CliExit.billing;
-        }
-        if (!ui.json) human();
-        final paths = portalPaths(plan);
-        await openPortal(
-          target,
-          covered ? paths.manage : paths.subscribe,
-          open: argResults!['open'] as bool,
-        );
-        return CliExit.ok;
+    requireSession(target);
+    final plan = await _planFromArgs(target, argResults!['plan'] as String?);
+    final covered = isCovered(target, plan);
+    final org = await loadOrg();
+    final statusOnly = argResults!['status'] as bool;
+    void human() {
+      ui.fields({
+        'plan': '${plan.title} (${plan.planCode})',
+        if (org != null)
+          'paid by': '${org.name} (${org.slug}), you are ${org.role}',
+        'subscription': covered ? 'active' : 'missing or expired',
       });
+      printAttention(target);
+    }
+
+    final data = {
+      'plan': plan.planCode,
+      'paidBy': org?.slug,
+      'subscriptionActive': covered,
+    };
+    if (statusOnly) {
+      ui.result(data, human: human);
+      return covered ? CliExit.ok : CliExit.billing;
+    }
+    if (!ui.json) human();
+    final paths = portalPaths(plan);
+    await openPortal(
+      target,
+      covered ? paths.manage : paths.subscribe,
+      open: argResults!['open'] as bool,
+    );
+    return CliExit.ok;
+  });
 }
 
 /// `idrt subscribe` — straight to checkout for the mode's plan.
@@ -194,18 +212,18 @@ class SubscribeCommand extends Command<int> {
 
   @override
   Future<int> run() => withTarget((target) async {
-        requireSession(target);
-        final plan = _planFromArgs(target, argResults!['plan'] as String?);
-        if (isCovered(target, plan)) {
-          ui.info('${plan.title} subscription is already active.');
-          return CliExit.ok;
-        }
-        await openPortal(
-          target,
-          portalPaths(plan).subscribe,
-          open: argResults!['open'] as bool,
-        );
-        ui.info('After checkout, run `idrt billing --status`.');
-        return CliExit.ok;
-      });
+    requireSession(target);
+    final plan = await _planFromArgs(target, argResults!['plan'] as String?);
+    if (isCovered(target, plan)) {
+      ui.info('${plan.title} subscription is already active.');
+      return CliExit.ok;
+    }
+    await openPortal(
+      target,
+      portalPaths(plan).subscribe,
+      open: argResults!['open'] as bool,
+    );
+    ui.info('After checkout, run `idrt billing --status`.');
+    return CliExit.ok;
+  });
 }

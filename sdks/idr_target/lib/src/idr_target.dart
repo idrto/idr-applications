@@ -290,6 +290,17 @@ class IdrTarget {
     }
   }
 
+  /// Whether [entityId] (default: the signed-in email) already has a root CA,
+  /// i.e. some admin machine set it up. Lookup only.
+  Future<bool> entityRootExists([String? entityId]) async {
+    final session = _authSession;
+    if (session == null) throw StateError('sign in first');
+    return _enrollClient.entityExists(
+      session: session,
+      entityId: entityId ?? session.email,
+    );
+  }
+
   Future<void> savePlanSelection({required String planCode}) async {
     await saveUserState(_userState.copyWith(planCode: planCode));
   }
@@ -741,10 +752,12 @@ class IdrTarget {
     ));
   }
 
-  /// Whether [hostLabel] is free under [entityId] (defaults to session email).
+  /// Whether [hostLabel] (in [zone]) is free under [entityId] (defaults to
+  /// session email).
   Future<({bool available, String verifiedFqhn})> isHostAvailable({
     required String hostLabel,
     String? entityId,
+    String? zone,
   }) async {
     final session = _authSession;
     if (session == null) throw StateError('sign in first');
@@ -752,6 +765,7 @@ class IdrTarget {
       session: session,
       hostLabel: hostLabel,
       entityId: entityId,
+      zone: zone,
     );
   }
 
@@ -761,6 +775,7 @@ class IdrTarget {
     required String label,
     String? payingPartyId,
     String? joinEntityId,
+    String? zone,
   }) async {
     final session = _authSession;
     if (session == null) {
@@ -774,6 +789,7 @@ class IdrTarget {
         label: label,
         payingPartyId: payingPartyId,
         joinEntityId: joinEntityId,
+        zone: zone,
       );
       _registrationState = withEnroll;
       _publishState();
@@ -834,7 +850,11 @@ class IdrTarget {
   ) async {
     final session = _authSession;
     if (session == null) throw StateError('sign in first');
-    await ensureAdminCa(entityId: entityId);
+    // Zone admins sign with a zone key; only the root machine has a root CA.
+    if ((await _identity.loadZoneCas()).isEmpty ||
+        await _identity.loadAdminCa() != null) {
+      await ensureAdminCa(entityId: entityId);
+    }
     final list = await _enrollment.listPending(
       session: session,
       entityId: entityId,
@@ -927,6 +947,86 @@ class IdrTarget {
     _publishState();
     return zone;
   }
+
+  /// Zones where the signed-in user has a role (from billing): `owner`,
+  /// `entityId`, `zones: [{zone, exists, role, membersApprove,
+  /// adminsCreateSubzones, key: {ski, status}?}]`.
+  Future<Map<String, dynamic>> myZones() async {
+    final session = _authSession;
+    if (session == null) throw StateError('sign in first');
+    return _enrollClient.myZones(session: session);
+  }
+
+  /// Give [email] a role in [zone]: `admin`, `member`, `none` (remove), or
+  /// null (admin if the zone has none yet, else member).
+  Future<Map<String, dynamic>> setZoneRole({
+    required String zone,
+    required String email,
+    String? role,
+  }) async {
+    final session = _authSession;
+    if (session == null) throw StateError('sign in first');
+    return _enrollClient.setZoneRole(
+      session: session,
+      zone: zone,
+      email: email.trim().toLowerCase(),
+      role: role,
+    );
+  }
+
+  /// Block (or unblock) one Source on one Target; it keeps the zone's others.
+  Future<Map<String, dynamic>> setTargetBlock({
+    required String target,
+    required String source,
+    bool blocked = true,
+  }) async {
+    final session = _authSession;
+    if (session == null) throw StateError('sign in first');
+    return _enrollClient.setTargetBlock(
+      session: session,
+      target: target,
+      source: source,
+      blocked: blocked,
+    );
+  }
+
+  Future<Map<String, dynamic>> setZoneSettings({
+    required String zone,
+    bool? membersApprove,
+    bool? adminsCreateSubzones,
+  }) async {
+    final session = _authSession;
+    if (session == null) throw StateError('sign in first');
+    return _enrollClient.setZoneSettings(
+      session: session,
+      zone: zone,
+      membersApprove: membersApprove,
+      adminsCreateSubzones: adminsCreateSubzones,
+    );
+  }
+
+  /// Zone admin: make [zone]'s key on this machine and ask the root admin to
+  /// sign it (or a new sub-zone). `approved` once usable, else `pending`.
+  Future<String> requestZoneKey({
+    required String zone,
+    required String entityId,
+  }) async {
+    final session = _authSession;
+    if (session == null) throw StateError('sign in first');
+    return _enrollment.requestZoneKey(
+      session: session,
+      entityId: entityId.trim().toLowerCase(),
+      zone: zone,
+    );
+  }
+
+  /// Fetch [zone]'s key if the root signed it: `approved`, `rejected`,
+  /// `pending`, or `none` (never asked).
+  Future<String> pullZoneKey(String zone) =>
+      _enrollment.pullZoneKey(zone.trim().toLowerCase());
+
+  /// Zone keys asked for on this machine and not signed yet.
+  Future<List<String>> zoneKeyRequests() => _enrollment.zoneKeyRequests();
 
   /// Zone CAs whose keys are held on this machine.
   Future<List<ZoneAuthority>> zoneAuthorities() =>

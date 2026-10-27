@@ -85,6 +85,32 @@ void main() {
 
       expect(await client.fetchCovering(_session), isNull);
     });
+
+    test('403 for a member: covered when the org owner already paid',
+        () async {
+      final client = BillingCommerceClient(
+        apiBaseUrl: 'http://127.0.0.1:1',
+        httpClient: MockClient((request) async {
+          if (request.url.path == '/api/v1/subscriptions/coverage') {
+            return http.Response(
+              jsonEncode({
+                'success': true,
+                'data': {
+                  'plans': ['idr_enterprise_bundle'],
+                },
+              }),
+              200,
+            );
+          }
+          return http.Response('forbidden', 403);
+        }),
+      );
+
+      expect(
+        (await client.fetchCovering(_session))?.planCode,
+        'idr_enterprise_bundle',
+      );
+    });
   });
 
   group('BillingCommerceClient.createCheckoutSession', () {

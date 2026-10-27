@@ -254,4 +254,91 @@ void main() {
     expect(() => EnrollmentManager.normalizeServices(['bad name']),
         throwsArgumentError);
   });
+
+  test('zone admin key: requested here, signed by the root, then signs '
+      'its zone', () async {
+    // The zone admin's machine has no root CA, only its own store.
+    final adminStore = SessionStore(storage: MemoryStorage());
+    final admin = EnrollmentManager(
+      enroll: EnrollClient(
+        controlPlaneUrl: 'http://cp.test',
+        httpClient: MockClient((r) async {
+          requests.add(r);
+          return respond(r);
+        }),
+      ),
+      registration: RegistrationClient(
+          controlPlaneUrl: 'http://cp.test', store: adminStore),
+      identity: DpIdentityStore(adminStore),
+      requireCrypto: () => crypto,
+    );
+    respond = (r) => http.Response(
+        jsonEncode({'enrollId': 'zk-1', 'pullToken': 'pt', 'kind': 'zone_authority'}),
+        201);
+    expect(
+        await admin.requestZoneKey(
+            session: session, entityId: entity, zone: 'Fin'),
+        'pending');
+    final asked = body('enroll-create');
+    expect(asked['kind'], 'zone_authority');
+    expect(asked['zone'], 'fin');
+    expect(await admin.zoneKeyRequests(), ['fin']);
+
+    // Root: the inbox lists the request; approving signs a zone CA for it.
+    respond = (r) {
+      if (r.url.path.endsWith('enroll-list')) {
+        return http.Response(
+            jsonEncode({
+              'enrollments': [
+                {
+                  'enrollId': 'zk-1',
+                  'kind': 'zone_authority',
+                  'zone': 'fin',
+                  'ski': asked['subjectSki'],
+                  'publicJwk': asked['publicJwk'],
+                  'csrPem': asked['csrPem'],
+                  'requestedBy': 'za@acme.test',
+                  'status': 'pending',
+                },
+              ],
+            }),
+            200);
+      }
+      if (r.url.path.endsWith('/delegates')) {
+        return http.Response(jsonEncode({'zones': []}), 200);
+      }
+      return http.Response(jsonEncode({'status': 'approved'}), 200);
+    };
+    await manager()
+        .approve(session: session, enrollId: 'zk-1', entityId: entity);
+    final signed = body('enroll-approve');
+    final root = (await DpIdentityStore(store).loadAdminCa())!;
+    final cred = signed['credential'] as Map<String, dynamic>;
+    expect(signed['issuerSki'], root['issuerSki']);
+    expect(signed['leafPem'], contains('BEGIN CERTIFICATE'));
+    expect(signed['chainPem'], contains((root['caCertPem'] as String).trim()));
+    expect(signed, isNot(contains('issuerPrivateJwk')));
+    expect(cred['kind'], 'zone_authority');
+    expect(cred['zone'], 'fin');
+    expect(cred['ski'], asked['subjectSki']);
+
+    // Zone admin picks the signed key up and can sign in its zone.
+    respond = (r) => http.Response(
+        jsonEncode({
+          'status': 'approved',
+          'ski': asked['subjectSki'],
+          'certPem': signed['leafPem'],
+          'chainPem': signed['chainPem'],
+        }),
+        200);
+    expect(await admin.pullZoneKey('fin'), 'approved');
+    expect(await admin.zoneKeyRequests(), isEmpty);
+    final key = (await DpIdentityStore(adminStore).loadZoneCa('fin'))!;
+    expect(key['certPem'], signed['leafPem']);
+    expect((key['privateJwk'] as Map)['d'], isNotEmpty);
+    expect(
+        await admin.requestZoneKey(
+            session: session, entityId: entity, zone: 'fin'),
+        'approved');
+  }, skip: skip);
 }

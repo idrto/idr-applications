@@ -197,7 +197,11 @@ class IdrSource {
   /// Enroll this machine as a `machine_source` device for the Target at
   /// [fqhn] (defaults to last FQHN). Returns the Source locator `label--entity`.
   /// Throws `ENROLLMENT_PENDING` until the Target Admin approves.
-  Future<String> enroll({String? fqhn, String? sourceLabel}) async {
+  Future<String> enroll({
+    String? fqhn,
+    String? sourceLabel,
+    String? zone,
+  }) async {
     await _ensureAuthSession();
     final target = (fqhn ?? _state.fqhn ?? await _prefs?.lastFqhn)?.trim();
     if (target == null || target.isEmpty) {
@@ -210,6 +214,7 @@ class IdrSource {
       final host = await _identity.enroll(
         targetFqhn: target,
         sourceLabel: sourceLabel,
+        zone: zone,
       );
       await _prefs?.setLastFqhn(target);
       _publish(fqhn: target, clearAttention: true);

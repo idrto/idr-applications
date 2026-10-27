@@ -36,8 +36,9 @@ class BillingCommerceClient {
     );
     final res = await _http.get(uri, headers: BaHeaders.forSession(session));
     // 403 = signed in, but this org role cannot see billing (org `member`).
-    // Not an expired session: never sign the user out for it.
-    if (res.statusCode == 403) return null;
+    // Not an expired session: never sign the user out for it. Ask only
+    // whether the org is covered (the owner may already have paid).
+    if (res.statusCode == 403) return _fetchOrgCoverage(session);
     if (res.statusCode == 401) {
       throw const IdrTargetException(
         code: IdrTargetErrorCode.authExpired,
@@ -58,6 +59,25 @@ class BillingCommerceClient {
       final plan = row['plan'];
       final name = plan is Map ? plan['name'] as String? : null;
       final code = planCodeFromPlanName(name);
+      if (code != null) return CoveringSubscription(planCode: code);
+    }
+    return null;
+  }
+
+  /// Active plan names of the org, readable by any member. Older billing
+  /// without the route (404) or any other failure: not covered.
+  Future<CoveringSubscription?> _fetchOrgCoverage(
+    IdrAuthSession session,
+  ) async {
+    final res = await _http.get(
+      Uri.parse('$_base/api/v1/subscriptions/coverage'),
+      headers: BaHeaders.forSession(session),
+    );
+    if (res.statusCode < 200 || res.statusCode >= 300) return null;
+    final data = (jsonDecode(res.body) as Map)['data'];
+    final plans = data is Map ? data['plans'] : null;
+    for (final name in plans is List ? plans : const []) {
+      final code = planCodeFromPlanName(name as String?);
       if (code != null) return CoveringSubscription(planCode: code);
     }
     return null;

@@ -5,6 +5,7 @@ import 'core/billing.dart';
 import 'core/commands.dart';
 import 'core/devices.dart';
 import 'core/target.dart';
+import 'core/zones.dart';
 import 'modes/enterprise.dart';
 import 'modes/provider.dart';
 
@@ -27,12 +28,16 @@ Future<Menu> idrtMenu() => withTarget((target) async {
   final email = session.email;
   final plan = currentPlan(target);
   final org = await loadOrg();
+  final zone = await loadZoneContext();
+  // Zone keys the root signed since last time become usable now.
+  final keyWaiting = await pullZoneKeys(target);
   final reg = target.registration;
   final step = target.state.readyStep;
   final header = [
     'Signed in as $email',
-    if (plan != null) '${plan.title} · ${_machineRole(target, plan)}',
+    if (plan != null) '${plan.title} · ${await _machineRole(target, plan)}',
     if (org != null) 'Organization: ${org.name} (${org.slug}), ${org.role}',
+    if (zone != null) 'Zone: ${zone.zone}, you are ${zone.role}',
     if (reg != null)
       'Target FQHN: ${reg.verifiedFqhn}  (the name people enroll against)',
     // Without an org, finishing setup is the next step whatever else is due.
@@ -48,7 +53,7 @@ Future<Menu> idrtMenu() => withTarget((target) async {
         ('Personal setup (your own machines)', () => ['personal', 'setup']),
         (
           'Enterprise setup (an organization)',
-          () => _enterpriseSetup(target, email),
+          () => _enterpriseSetup(org?.slug, email),
         ),
         (
           'Service Provider setup (run Targets for customers)',
@@ -68,7 +73,7 @@ Future<Menu> idrtMenu() => withTarget((target) async {
           '$header\nEnterprise setup is not finished: this machine '
           'has no organization yet.',
       items: <MenuItem>[
-        ('Finish Enterprise setup', () => _enterpriseSetup(target, email)),
+        ('Finish Enterprise setup', () => _enterpriseSetup(org?.slug, email)),
         ..._common,
       ],
     );
@@ -77,25 +82,59 @@ Future<Menu> idrtMenu() => withTarget((target) async {
   final mode = _mode(plan);
   final provider = plan == IdrBusinessPlan.serviceProvider;
   final tenants = provider ? await tenantIds() : const <String>[];
-  final reviews = isAdminMachine(target) || provider;
+  final reviews = provider || await isApprover(target);
+  final enterprise = plan == IdrBusinessPlan.enterprise;
+  final awaiting = reg != null && target.state.enrollment.awaitingAdmin;
+  // Stuck Target: nobody in the org holds the CA that could approve it.
+  final noAdmin =
+      enterprise &&
+      awaiting &&
+      !isAdminMachine(target) &&
+      canBill(org!.role) &&
+      await _noAdminMachine(target);
   return (
     title: 'IDR',
     header: header,
     items: <MenuItem>[
-      if (!isCovered(target, plan))
+      if (enterprise && !target.userState.enterpriseEntityConfirmed)
+        ('Finish Enterprise setup', () => _enterpriseSetup(org?.slug, email))
+      else if (!isCovered(target, plan) && org != null && !canBill(org.role))
+        explain(
+          'Waiting for ${org.name} to renew the ${plan.title} plan',
+          'The organization has no active ${plan.title} subscription. Only '
+              'its owner or an admin can buy it (billing portal); this '
+              'machine picks it up when you open `idrt` afterwards.',
+        )
+      else if (!isCovered(target, plan))
         ('Buy or renew the ${plan.title} plan', () => ['billing'])
       else if (provider && tenants.isEmpty)
         ('Add your first customer tenant', () => ['provider', 'tenant', 'add'])
       else if (reg == null)
         ('Register this machine as a Target', () => [mode, 'register'])
-      else if (target.state.enrollment.awaitingAdmin)
+      else if (noAdmin)
+        (
+          'Make this machine the admin and approve it here',
+          () => ['enterprise', 'setup', '--org', org.slug, '--role', 'admin'],
+        )
+      else if (awaiting)
         explain(
           'Waiting for an admin to approve this machine',
-          'On the admin machine: `idrt $mode pending`, then '
-              '`idrt $mode approve` (or use its menu: Pending approvals).',
+          zone != null
+              ? 'An admin of zone ${zone.zone} approves it in their `idrt` > '
+                    'Pending approvals.'
+              : 'On the admin machine: `idrt $mode pending`, then '
+                    '`idrt $mode approve` (or use its menu: Pending approvals).',
         )
       else
         ('Start serving (Ctrl+C comes back here)', () => ['start']),
+      if (keyWaiting.isNotEmpty)
+        explain(
+          'Waiting for the root admin to sign your zone key '
+              '(${keyWaiting.join(', ')})',
+          'The root admin approves it in their `idrt` > Pending approvals. '
+              'Then this machine approves requests for '
+              '${keyWaiting.join(', ')}; it is picked up when you open `idrt`.',
+        ),
       submenu(
         'Services on this machine (${target.services.length})',
         _servicesMenu,
@@ -134,9 +173,14 @@ String _mode(IdrBusinessPlan plan) => switch (plan) {
   IdrBusinessPlan.serviceProvider => 'provider',
 };
 
-String _machineRole(IdrTarget target, IdrBusinessPlan plan) {
+Future<String> _machineRole(IdrTarget target, IdrBusinessPlan plan) async {
   if (plan == IdrBusinessPlan.serviceProvider) return 'provider machine';
-  if (!isAdminMachine(target)) return 'Target machine';
+  if (!isAdminMachine(target)) {
+    final keys = [for (final z in await target.zoneAuthorities()) z.zone];
+    return keys.isEmpty
+        ? 'Target machine'
+        : 'zone admin machine (${keys.join(', ')})';
+  }
   return switch (target.userState.enterpriseCaRole) {
     'root' => 'root CA admin machine',
     'intermediate' => 'intermediate CA admin machine',
@@ -147,37 +191,39 @@ String _machineRole(IdrTarget target, IdrBusinessPlan plan) {
 bool _isRootCa(IdrTarget target) =>
     isAdminMachine(target) && target.userState.enterpriseCaRole == 'root';
 
-Future<int?> _pendingCount(IdrTarget target, String email) async {
+Future<int?> _pendingCount(IdrTarget target, {String? zone}) async {
   try {
     return (await target.listPendingEnrollments(
-      email.trim().toLowerCase(),
-    )).where((r) => r.isPending).length;
+      await approverEntity(target),
+    )).where((r) => r.isPending && (zone == null || r.zone == zone)).length;
   } catch (_) {
     return null; // billing unreachable: the submenu's command will say why
   }
 }
 
-/// Enterprise setup with the organization picked (and, the first time, the
-/// machine's role).
-List<String> _enterpriseSetup(IdrTarget target, String email) => [
+/// Enterprise setup with the organization picked. Setup itself picks the
+/// role: admin on the org's first machine, otherwise it asks.
+List<String> _enterpriseSetup(String? orgSlug, String email) => [
   'enterprise',
   'setup',
   '--org',
-  _pickOrg(email),
-  if (target.userState.accountPath == null) ...['--role', _chooseRole()],
+  orgSlug ?? _pickOrg(email),
 ];
 
 String _pickOrg(String email) =>
     pickOrg(knownOrgsFile, email, validate: orgSlugProblem);
 
-String _chooseRole() => ui.choose(
-  'What will this machine do?',
-  const ['admin', 'target'],
-  flag: '--role',
-  display: (r) => r == 'admin'
-      ? 'Approve devices and hold the org CA (admin machine)'
-      : 'Serve services to Sources (Target)',
-);
+Future<bool> _noAdminMachine(IdrTarget target) async {
+  try {
+    final entity = target.registration?.entityId ?? target.session!.email;
+    if (entity.toLowerCase() != target.session!.email.toLowerCase()) {
+      return false; // joined someone else's entity: their admin approves
+    }
+    return !await target.entityRootExists(entity);
+  } catch (_) {
+    return false; // unknown: keep the plain "waiting" note
+  }
+}
 
 Future<Menu> _servicesMenu() => withTarget(
   (target) async => (
@@ -208,11 +254,7 @@ Future<Menu> _servicesMenu() => withTarget(
 
 Future<Menu> _approvalsMenu(String mode, IdrBusinessPlan plan) =>
     withTarget((target) async {
-      final count = await _pendingCount(target, target.session!.email);
-      final zones = [
-        for (final z in target.enterpriseZones)
-          if (z.hasCertificate) z.pathKey,
-      ];
+      final count = await _pendingCount(target);
       return (
         title: 'Pending approvals',
         header: switch (count) {
@@ -225,15 +267,8 @@ Future<Menu> _approvalsMenu(String mode, IdrBusinessPlan plan) =>
         items: <MenuItem>[
           ('Review pending requests', () => [mode, 'pending']),
           if (count != 0) ...[
-            (
-              'Approve a request',
-              () => [
-                mode,
-                'approve',
-                if (plan == IdrBusinessPlan.enterprise && zones.isNotEmpty)
-                  ..._chooseZone(zones),
-              ],
-            ),
+            // approve asks for a zone only when the request has none.
+            ('Approve a request', () => [mode, 'approve']),
             ('Reject a request', () => [mode, 'reject']),
           ],
           backItem,
@@ -241,22 +276,14 @@ Future<Menu> _approvalsMenu(String mode, IdrBusinessPlan plan) =>
       );
     });
 
-List<String> _chooseZone(List<String> zones) {
-  final zone = ui.choose(
-    'Sign the device under which zone?',
-    ['', ...zones],
-    flag: '--zone',
-    display: (z) => z.isEmpty ? 'No zone (directly under the root)' : z,
-  );
-  return zone.isEmpty ? const [] : ['--zone', zone];
-}
-
 Future<Menu> _organizationMenu() => withTarget((target) async {
   final org = (await loadOrg())!;
   final email = target.session!.email;
   final zones = await zoneRecords(target);
   final root = _isRootCa(target);
   final owner = org.role == 'owner';
+  final roles = owner ? const <String, String>{} : await myZoneRoles(target);
+  final managesZones = owner || roles.containsValue('admin');
   final others = knownOrgs(
     knownOrgsFile,
     email,
@@ -265,9 +292,11 @@ Future<Menu> _organizationMenu() => withTarget((target) async {
     title: 'Organization: ${org.name}',
     header:
         '${org.name} (${org.slug}) · you are ${org.role} · '
-        'this machine: ${_machineRole(target, IdrBusinessPlan.enterprise)}',
+        'this machine: ${await _machineRole(target, IdrBusinessPlan.enterprise)}',
     items: <MenuItem>[
       ('View organization details', () => ['enterprise', 'org']),
+      if (managesZones && zones.isNotEmpty)
+        ('Invite people to zones', () => ['enterprise', 'zone', 'invite']),
       if (zones.isNotEmpty)
         submenu('Zones (${zones.length})', _zonesMenu)
       else if (root)
@@ -286,10 +315,7 @@ Future<Menu> _organizationMenu() => withTarget((target) async {
           'Billing lists devices only for the organization owner; you '
               'are ${org.role}. Ask an owner.',
         ),
-      (
-        'Users and roles',
-        () => ['enterprise', 'members'],
-      ),
+      ('Users and roles', () => ['enterprise', 'members']),
       if (others.isNotEmpty)
         explain(
           'Switch organization',
@@ -318,7 +344,7 @@ List<String> _joinHelp(IdrTarget target, String orgSlug, String zone) {
   return [
     'How someone joins zone $zone:',
     '  Target FQHN: $fqhn',
-    '  1. Invite them to $orgSlug (Organization > Users and roles).',
+    '  1. Add them to this zone (Add a member, below).',
     '  2. They run: idr login',
     '     then:     idr enroll $fqhn --org $orgSlug',
     '  3. You approve them here (Approve a pending request into this zone).',
@@ -365,12 +391,17 @@ Future<Menu> _zoneMenu(String path) => withTarget((target) async {
   }
   final org = (await loadOrg())!;
   final root = _isRootCa(target);
-  final admin = isAdminMachine(target);
+  final owner = org.role == 'owner';
+  final myRole = owner ? null : (await myZoneRoles(target))[path];
+  final manages = owner || myRole == 'admin';
+  final keyHere = z['keyOnThisMachine'] == true;
   final local = z['name'] != null;
   final certified = z['certificate'] != null;
   final admins = z['admins'] as List;
+  final people = z['zoneMembers'] as List? ?? const [];
   final devices = z['devices'] as List;
   final members = z['members'] as List?;
+  final waiting = keyHere ? await _pendingCount(target, zone: path) : null;
   return (
     title: 'Zone $path',
     header: [
@@ -378,11 +409,13 @@ Future<Menu> _zoneMenu(String path) => withTarget((target) async {
       'Parent: ${z['parent'] ?? '(top level)'}',
       'Certificate: ${certified ? 'issued' : 'none yet'}',
       'Zone admins: ${admins.isEmpty ? '(none)' : admins.join(', ')}',
+      'Zone members: ${people.isEmpty ? '(none)' : people.join(', ')}',
+      'Approves Sources: ${z['membersApprove'] == true ? 'admins, and members for their own Target' : 'zone admins only'}',
+      if (myRole != null) 'You: $myRole of this zone',
       'Devices recorded here: ${devices.isEmpty ? '(none)' : devices.join(', ')}',
-      members == null
-          ? 'Members: only the organization owner can list them'
-          : 'Members (from billing): '
-                '${members.isEmpty ? '(none)' : members.map((m) => (m as Map)['host']).join(', ')}',
+      if (members != null && members.isNotEmpty)
+        'Enrolled machines (from billing): '
+            '${members.map((m) => (m as Map)['host']).join(', ')}',
       '',
       ..._joinHelp(target, org.slug, path),
     ].join('\n'),
@@ -392,15 +425,53 @@ Future<Menu> _zoneMenu(String path) => withTarget((target) async {
         ('Issue its certificate', () => ['enterprise', 'zone', 'add', path]),
       if (root && certified)
         ('Set allowed services', () => ['enterprise', 'zone', 'policy', path]),
-      if (admin && certified)
+      if (keyHere && waiting != 0)
         (
-          'Approve a pending request into this zone',
+          'Approve a pending request into this zone'
+              '${waiting == null ? '' : ' ($waiting)'}',
           () => ['enterprise', 'approve', '--zone', path],
+        )
+      else if (keyHere)
+        explain(
+          'Approve a pending request into this zone (none waiting)',
+          'Nothing is waiting for zone $path. Requests show up here after '
+              'someone enrolls into it.',
         ),
-      if (admin && local)
+      if (owner && certified)
         (
-          'Make someone a zone admin',
-          () => ['enterprise', 'zone', 'invite', path],
+          admins.isEmpty ? 'Choose the zone admin' : 'Add another zone admin',
+          () => [
+            'enterprise',
+            'zone',
+            'invite',
+            '--zone',
+            path,
+            '--role',
+            'admin',
+          ],
+        ),
+      if (manages && certified)
+        (
+          'Add a member',
+          () => [
+            'enterprise',
+            'zone',
+            'invite',
+            '--zone',
+            path,
+            '--role',
+            'member',
+          ],
+        ),
+      if (manages && certified)
+        (
+          'Zone settings (who approves${owner ? ', sub-zones' : ''})',
+          () => ['enterprise', 'zone', 'settings', path],
+        ),
+      if (!root && myRole == 'admin' && z['adminsCreateSubzones'] == true)
+        (
+          'Create a sub-zone (the root admin signs it)',
+          () => ['enterprise', 'zone', 'add', path],
         ),
       if (root && local)
         (

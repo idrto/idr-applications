@@ -143,6 +143,31 @@ class DpIdentityStore extends MachineIdentityStore {
     await store.writeJson(_zoneCasKey, all);
   }
 
+  static const _zoneKeyRequestsKey = 'dp.zone_key_requests';
+
+  /// Zone keys this machine asked the root to sign, by zone: `ski`,
+  /// `privateJwk`, `pullToken`, `enrollId`. Moved to [saveZoneCa] once signed.
+  Future<Map<String, Map<String, dynamic>>> loadZoneKeyRequests() async {
+    final raw = await store.readJson(_zoneKeyRequestsKey);
+    return {
+      for (final e in (raw ?? const {}).entries)
+        if (e.value is Map) e.key: Map<String, dynamic>.from(e.value as Map),
+    };
+  }
+
+  Future<void> saveZoneKeyRequest(
+    String zone,
+    Map<String, dynamic>? entry,
+  ) async {
+    final all = await loadZoneKeyRequests();
+    if (entry == null) {
+      all.remove(zone);
+    } else {
+      all[zone] = entry;
+    }
+    await store.writeJson(_zoneKeyRequestsKey, all);
+  }
+
   Future<void> deleteZoneCa(String zone) async {
     final all = await loadZoneCas();
     if (all.remove(zone) != null) await store.writeJson(_zoneCasKey, all);

@@ -16,6 +16,11 @@ class EnrollCommand extends Command<int> {
         'org',
         help: 'Billing organization to enroll into (its slug). Binds this '
             'sign-in to that org first; you must be a member.',
+      )
+      ..addOption(
+        'zone',
+        help: 'Join this zone of the organization (e.g. fin). Its admin '
+            'approves, and its policy decides which services you may use.',
       );
   }
 
@@ -28,12 +33,13 @@ class EnrollCommand extends Command<int> {
 
   @override
   String get invocation =>
-      'idr enroll [<target-fqhn>] [--label <name>] [--org <slug>]';
+      'idr enroll [<target-fqhn>] [--label <name>] [--org <slug>] [--zone <zone>]';
 
   @override
   String get usageFooter => '\nExamples:\n'
       '  idr enroll laptop--you@example.com\n'
-      '  idr enroll gpu-box--admin@acme.com --org acme --label alice-laptop';
+      '  idr enroll gpu-box--admin@acme.com --org acme --label alice-laptop\n'
+      '  idr enroll gpu-box--admin@acme.com --org acme --zone fin';
 
   @override
   Future<int> run() => withSource((source) async {
@@ -57,12 +63,26 @@ class EnrollCommand extends Command<int> {
           value: argResults!.rest.firstOrNull ?? source.state.fqhn,
           flag: '<target-fqhn>',
         );
+        var zone = (argResults!['zone'] as String?)?.trim().toLowerCase();
+        // A zoned Target's name carries its zone; billing files it there.
+        final targetZone = SourceIdentityManager.zoneFromFqhn(fqhn);
+        if ((zone == null || zone.isEmpty) &&
+            targetZone == null &&
+            boundOrg != null &&
+            ui.interactive &&
+            ui.confirm('Join a specific zone of $boundOrg? (No: the '
+                'organization admin decides)')) {
+          zone = ui.ask('Zone (e.g. fin)', flag: '--zone').toLowerCase();
+        }
+        if (zone != null && zone.isEmpty) zone = null;
+        final shownZone = zone ?? targetZone;
         String host;
         Future<String> enrollOnce() => ui.task(
               'Enrolling with $fqhn',
               () => source.enroll(
                 fqhn: fqhn,
                 sourceLabel: argResults!['label'] as String?,
+                zone: zone,
               ),
               done: (h) => 'Source device approved: $h',
             );
@@ -86,12 +106,39 @@ class EnrollCommand extends Command<int> {
         } on IdrSourceException catch (e) {
           if (e.code != 'ENROLLMENT_PENDING') rethrow;
           // Not a failure: the admin hasn't decided yet.
-          ui.result({'status': 'pending', 'target': fqhn, 'message': e.message},
-              human: () {
-            ui.info(e.message);
-            ui.hint(translateSourceError(e)!.hint!);
-          });
-          return CliExit.connect;
+          if (!ui.interactive) {
+            ui.result(
+                {'status': 'pending', 'target': fqhn, 'message': e.message},
+                human: () {
+              ui.info(e.message);
+              ui.hint(translateSourceError(e)!.hint!);
+            });
+            return CliExit.connect;
+          }
+          // A person is watching: wait here instead of asking them to rerun.
+          ui.hint(shownZone == null
+              ? 'Ask the Target admin to approve it: `idrt` > Pending '
+                  'approvals.'
+              : 'Ask an admin of zone $shownZone to approve it: `idrt` > Pending '
+                  'approvals.');
+          host = await ui.task(
+            'Waiting for the admin to approve (Ctrl+C stops; '
+            '`idr enroll` resumes)',
+            () async {
+              while (true) {
+                try {
+                  return await source.enroll(
+                    fqhn: fqhn,
+                    sourceLabel: argResults!['label'] as String?,
+                    zone: zone,
+                  );
+                } on IdrSourceException catch (e) {
+                  if (e.code != 'ENROLLMENT_PENDING') rethrow;
+                }
+              }
+            },
+            done: (h) => 'Source device approved: $h',
+          );
         }
         ui.result(
           {
@@ -99,6 +146,7 @@ class EnrollCommand extends Command<int> {
             'target': fqhn,
             'sourceHost': host,
             'org': boundOrg,
+            'zone': zone,
           },
           human: () {
             writeAttention(source);

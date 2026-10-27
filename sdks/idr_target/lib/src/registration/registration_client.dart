@@ -124,7 +124,8 @@ class RegistrationClient {
         body.contains('"exists":false');
   }
 
-  /// Register host label (e.g. `laptop`). Returns verified `host--entity.idr.to`.
+  /// Register host label (e.g. `laptop`). Returns verified
+  /// `host[.zone]--entity.idr.to`: an Enterprise [zone] is part of the name.
   Future<IdrTargetRegistration> registerHost({
     required IdrAuthSession session,
     required String entityId,
@@ -133,6 +134,7 @@ class RegistrationClient {
     String? payingPartyId,
     String? publicJwkJson,
     String role = 'target',
+    String? zone,
   }) async {
     final label = _normalizeHostLabel(hostLabel);
 
@@ -148,6 +150,7 @@ class RegistrationClient {
         'hostLabel': label,
         'machineSki': machineSki,
         'role': role,
+        if (zone != null) 'zone': zone,
         if (publicJwkJson != null) 'publicJwk': jsonDecode(publicJwkJson),
       }),
     );
@@ -159,6 +162,12 @@ class RegistrationClient {
           (body['fqhn'] as String?);
       if (fqhn == null || fqhn.isEmpty) {
         throw StateError('host register missing verifiedFqhn');
+      }
+      if (zone != null && !fqhn.startsWith('$label.$zone--')) {
+        // An older billing drops the zone; never serve a name without it.
+        throw StateError(
+          'host register returned $fqhn without zone $zone; update billing',
+        );
       }
       final reg = IdrTargetRegistration(
         entityId: (body['entityId'] as String?) ?? entityId,
@@ -212,11 +221,13 @@ class RegistrationClient {
     required IdrAuthSession session,
     required String entityId,
     required String hostLabel,
+    String? zone,
   }) async {
     final uri = Uri.parse('$_base/api/v1/registration/host-available').replace(
       queryParameters: {
         'entityId': entityId,
         'hostLabel': hostLabel,
+        if (zone != null) 'zone': zone,
       },
     );
     final res = await _http.get(uri, headers: _authHeaders(session));
