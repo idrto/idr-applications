@@ -89,7 +89,10 @@ jobs:
 
           dart pub get --directory "${pkg}"
           mkdir -p dist
-          dart compile exe "${pkg}/${bin}" -o "dist/${exe}"
+          # `dart compile exe` rejects packages with build hooks (objective_c).
+          dart build cli -t "${pkg}/${bin}" -o build-out
+          cp -v "build-out/bundle/bin/${exe}" dist/
+          if [[ -d build-out/bundle/lib ]]; then cp -rv build-out/bundle/lib/. dist/; fi
 
           if [[ "${CLI}" == idr ]]; then
             src="agent-dist/source/${PLAT}"
