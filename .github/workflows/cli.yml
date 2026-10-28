@@ -168,6 +168,19 @@ jobs:
         working-directory: applications/apps/idr_target_app
         run: flutter build windows --release
 
+      # The app looks for target-agent and idr_dp next to its exe.
+      - name: Bundle agent binaries (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          set -euo pipefail
+          curl -fsSL -o e2e-agent-binaries.zip             https://github.com/idrto/agent/releases/download/e2e-latest/e2e-agent-binaries.zip
+          mkdir -p agent-dist
+          python -c "import zipfile; zipfile.ZipFile('e2e-agent-binaries.zip').extractall('agent-dist')"
+          rel=applications/apps/idr_target_app/build/windows/x64/runner/Release
+          cp -v agent-dist/target/windows-x64/* "${rel}/"
+          find agent-dist -iname 'idr_dp*.dll' -exec cp -v {} "${rel}/" \;
+          test -f "${rel}/target-agent.exe" && test -f "${rel}/idr_dp.dll"
+
       - uses: actions/upload-artifact@v4
         if: runner.os == 'Windows'
         with:
