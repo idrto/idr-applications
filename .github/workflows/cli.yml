@@ -108,3 +108,65 @@ jobs:
           path: dist/
           if-no-files-found: error
           retention-days: 14
+
+  target-app:
+    name: idr_target_app ${{ matrix.plat }}
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            plat: linux-x64
+          - os: windows-latest
+            plat: windows-x64
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: applications/apps
+
+      - uses: actions/checkout@v4
+        with:
+          repository: idrto/agent
+          ref: e2e
+          path: agents_engine/agent
+
+      - uses: actions/checkout@v4
+        with:
+          repository: 2keyapp/2key-billing-sdks
+          path: Auth_repo/2key-billing-sdks
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Linux desktop deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libgtk-3-dev libsecret-1-dev libjsoncpp-dev
+
+      - name: Analyze and test
+        working-directory: applications/apps/idr_target_app
+        run: |
+          set -euo pipefail
+          flutter pub get
+          flutter analyze
+          flutter test
+
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        working-directory: applications/apps/idr_target_app
+        run: flutter build windows --release
+
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'Windows'
+        with:
+          name: idr_target_app-${{ matrix.plat }}
+          path: applications/apps/idr_target_app/build/windows/x64/runner/Release/
+          if-no-files-found: error
+          retention-days: 14
