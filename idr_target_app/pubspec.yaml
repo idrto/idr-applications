@@ -38,6 +38,8 @@ dependencies:
   path: ^1.9.1
   idr_target:
     path: ../sdks/idr_target
+  # Native folder/file pickers (Windows IFileOpenDialog); already resolved transitively.
+  win32: ^6.4.0
 
 dev_dependencies:
   flutter_test:

@@ -76,7 +76,6 @@ class _SilentProcess extends ProcessManager {
     required String configPath,
     String? workingDirectory,
     Map<String, String>? injectEnv,
-    String? entitlementJwt,
   }) async {}
 
   @override

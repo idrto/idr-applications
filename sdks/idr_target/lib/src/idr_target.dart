@@ -4,6 +4,8 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
+
+import 'transfer/target_transfers.dart';
 import 'package:two_key_dart_sdk/two_key_headless.dart';
 
 import 'agent/agent_runtime.dart';
@@ -212,6 +214,20 @@ class IdrTarget {
   IdrAuthSession? get session => _authSession;
   IdrTargetRegistration? get registration => _registrationState;
 
+  Future<IdrAuthSession?>? _remint;
+
+  /// The session for a billing call. The API JWT lives minutes, the Better Auth
+  /// session cookie weeks: re-mint the JWT from the cookie once it is (nearly)
+  /// expired. Concurrent callers share one mint; on failure the old one is kept.
+  Future<IdrAuthSession?> _freshSession() async {
+    final s = _authSession;
+    if (s == null || !s.accessTokenLikelyExpired) return s;
+    return _remint ??= _auth.restore().then((fresh) {
+      if (fresh != null && _authSession != null) _authSession = fresh;
+      return _authSession;
+    }).whenComplete(() => _remint = null);
+  }
+
   /// First-run / plan / role choices persisted in the SDK secure store.
   TargetUserState get userState => _userState;
 
@@ -261,7 +277,7 @@ class IdrTarget {
 
   /// Probe whether the personal Billing email entity already exists (lookup only).
   Future<({bool exists, String entityId})> probePersonalEntity() async {
-    final session = _authSession;
+    final session = await _freshSession();
     if (session == null) throw StateError('sign in first');
     return _registration.probePersonalEntity(session);
   }
@@ -273,11 +289,12 @@ class IdrTarget {
   Future<RoleAvailability> resolveRoleAvailability(IdrBusinessPlan plan) async {
     try {
       var adminExists = false;
-      if (plan == IdrBusinessPlan.personal && _authSession != null) {
-        final email = _authSession!.email.trim().toLowerCase();
+      final session = await _freshSession();
+      if (plan == IdrBusinessPlan.personal && session != null) {
+        final email = session.email.trim().toLowerCase();
         adminExists = email.isNotEmpty &&
             await _enrollClient.entityExists(
-              session: _authSession!,
+              session: session,
               entityId: email,
             );
       }
@@ -293,7 +310,7 @@ class IdrTarget {
   /// Whether [entityId] (default: the signed-in email) already has a root CA,
   /// i.e. some admin machine set it up. Lookup only.
   Future<bool> entityRootExists([String? entityId]) async {
-    final session = _authSession;
+    final session = await _freshSession();
     if (session == null) throw StateError('sign in first');
     return _enrollClient.entityExists(
       session: session,
@@ -307,7 +324,7 @@ class IdrTarget {
 
   /// Refresh [TargetUserState.hasActivePlan] from Billing. Server is truth.
   Future<void> hydrateSubscription() async {
-    final session = _authSession;
+    final session = await _freshSession();
     if (session == null) return;
     try {
       final pendingSessionId = _pendingCheckoutSessionId;
@@ -351,7 +368,7 @@ class IdrTarget {
 
   /// Open Billing/Stripe checkout for [planCode], then rehydrate.
   Future<void> startCheckout(String planCode) async {
-    final session = _authSession;
+    final session = await _freshSession();
     if (session == null) {
       throw const IdrTargetException(
         code: IdrTargetErrorCode.authRequired,
@@ -430,6 +447,14 @@ class IdrTarget {
       );
     }
   }
+
+  /// File transfer through the running agent (see [IdrFileTransferConfig]).
+  /// One instance per [IdrTarget], so its agent connection is reused.
+  late final TargetTransfers transfers = TargetTransfers(
+    agentBinaryPath: config.agentBinaryPath,
+    configPath: p.join(configDir.path, 'target.local.toml'),
+    dataDir: p.join(configDir.path, 'transfers'),
+  );
 
   Directory get configDir {
     if (config.configDirectory != null) {
@@ -645,7 +670,7 @@ class IdrTarget {
   Future<void> _reloadAgentIfRunning() async {
     if (_agentStatus != AgentRuntimeStatus.running) return;
     final reg = _registrationState;
-    final session = _authSession;
+    final session = await _freshSession();
     final ent = _entitlement.entitlement;
     if (reg == null || session == null || ent == null) return;
     final targetId = await _identity.ensureTargetIdentity(_requireCrypto());
@@ -759,7 +784,7 @@ class IdrTarget {
     String? entityId,
     String? zone,
   }) async {
-    final session = _authSession;
+    final session = await _freshSession();
     if (session == null) throw StateError('sign in first');
     return _registration.isHostAvailable(
       session: session,
@@ -777,7 +802,7 @@ class IdrTarget {
     String? joinEntityId,
     String? zone,
   }) async {
-    final session = _authSession;
+    final session = await _freshSession();
     if (session == null) {
       throw StateError('sign in first');
     }
@@ -828,7 +853,7 @@ class IdrTarget {
   ///
   /// [package] defaults to the selected plan's DP package.
   Future<void> ensureAdminCa({String? entityId, String? package}) async {
-    final session = _authSession;
+    final session = await _freshSession();
     if (session == null) throw StateError('sign in first');
     final id = (entityId ?? session.email).trim().toLowerCase();
     if (id.isEmpty) throw StateError('entityId required');
@@ -848,7 +873,7 @@ class IdrTarget {
   Future<List<EnrollmentRequest>> listPendingEnrollments(
     String entityId,
   ) async {
-    final session = _authSession;
+    final session = await _freshSession();
     if (session == null) throw StateError('sign in first');
     // Zone admins sign with a zone key; only the root machine has a root CA.
     if ((await _identity.loadZoneCas()).isEmpty ||
@@ -865,7 +890,7 @@ class IdrTarget {
 
   /// Admin: reject a pending enrollment.
   Future<void> rejectEnrollment(String enrollId) async {
-    final session = _authSession;
+    final session = await _freshSession();
     if (session == null) throw StateError('sign in first');
     await _enrollment.reject(session: session, enrollId: enrollId);
   }
@@ -883,7 +908,7 @@ class IdrTarget {
     String? payingPartyId,
     String? zone,
   }) async {
-    final session = _authSession;
+    final session = await _freshSession();
     if (session == null) throw StateError('sign in first');
     final eid = (entityId ??
             _registrationState?.entityId ??
@@ -924,7 +949,7 @@ class IdrTarget {
     required List<String> path,
     required String displayName,
   }) async {
-    final session = _authSession;
+    final session = await _freshSession();
     if (session == null) throw StateError('sign in first');
     if (IdrBusinessPlan.fromPlanCode(_userState.planCode) !=
         IdrBusinessPlan.enterprise) {
@@ -952,7 +977,7 @@ class IdrTarget {
   /// `entityId`, `zones: [{zone, exists, role, membersApprove,
   /// adminsCreateSubzones, key: {ski, status}?}]`.
   Future<Map<String, dynamic>> myZones() async {
-    final session = _authSession;
+    final session = await _freshSession();
     if (session == null) throw StateError('sign in first');
     return _enrollClient.myZones(session: session);
   }
@@ -964,7 +989,7 @@ class IdrTarget {
     required String email,
     String? role,
   }) async {
-    final session = _authSession;
+    final session = await _freshSession();
     if (session == null) throw StateError('sign in first');
     return _enrollClient.setZoneRole(
       session: session,
@@ -980,7 +1005,7 @@ class IdrTarget {
     required String source,
     bool blocked = true,
   }) async {
-    final session = _authSession;
+    final session = await _freshSession();
     if (session == null) throw StateError('sign in first');
     return _enrollClient.setTargetBlock(
       session: session,
@@ -995,7 +1020,7 @@ class IdrTarget {
     bool? membersApprove,
     bool? adminsCreateSubzones,
   }) async {
-    final session = _authSession;
+    final session = await _freshSession();
     if (session == null) throw StateError('sign in first');
     return _enrollClient.setZoneSettings(
       session: session,
@@ -1011,7 +1036,7 @@ class IdrTarget {
     required String zone,
     required String entityId,
   }) async {
-    final session = _authSession;
+    final session = await _freshSession();
     if (session == null) throw StateError('sign in first');
     return _enrollment.requestZoneKey(
       session: session,
@@ -1039,7 +1064,7 @@ class IdrTarget {
     required List<String> path,
     required List<String> services,
   }) async {
-    final session = _authSession;
+    final session = await _freshSession();
     if (session == null) throw StateError('sign in first');
     if (IdrBusinessPlan.fromPlanCode(_userState.planCode) !=
         IdrBusinessPlan.enterprise) {
@@ -1057,14 +1082,14 @@ class IdrTarget {
 
   /// The org's active zone authorities as billing records them.
   Future<List<Map<String, dynamic>>> fetchZoneAuthorities() async {
-    final session = _authSession;
+    final session = await _freshSession();
     if (session == null) throw StateError('sign in first');
     return _enrollClient.listDelegates(session: session);
   }
 
   /// Enterprise owner: the org's issued credentials as billing records them.
   Future<List<Map<String, dynamic>>> listCredentials() async {
-    final session = _authSession;
+    final session = await _freshSession();
     if (session == null) throw StateError('sign in first');
     return _enrollClient.listCredentials(session: session);
   }
@@ -1075,7 +1100,7 @@ class IdrTarget {
     String ski, {
     String? reason,
   }) async {
-    final session = _authSession;
+    final session = await _freshSession();
     if (session == null) throw StateError('sign in first');
     final root = await _identity.loadAdminCa();
     if (root != null && root['issuerSki'] == ski) {
@@ -1148,7 +1173,7 @@ class IdrTarget {
   }
 
   Future<void> _continueAfterRegistration() async {
-    final session = _authSession;
+    final session = await _freshSession();
     final reg = _registrationState;
     if (session == null || reg == null) {
       idrLog('continue: stop — missing session/registration');
@@ -1247,7 +1272,7 @@ class IdrTarget {
   /// Phase 1: skip leaf for native `*.idr.to`. Phase 2: Entity-CA when enabled.
   Future<void> ensureTls() async {
     final reg = _registrationState;
-    final session = _authSession;
+    final session = await _freshSession();
     if (reg == null) return;
 
     _setStatus(IdrTargetStatus.securingTls);
@@ -1293,7 +1318,7 @@ class IdrTarget {
 
   Future<void> _startAgent() async {
     final reg = _registrationState;
-    final session = _authSession;
+    final session = await _freshSession();
     final ent = _entitlement.entitlement;
     if (reg == null || session == null || ent == null) {
       idrLog(
@@ -1323,7 +1348,7 @@ class IdrTarget {
   /// Verified custom domains for [targetFqhn]; empty (ACME off) when billing
   /// can't say, so a billing hiccup never blocks the agent.
   Future<List<String>> _verifiedCustomDomains(String targetFqhn) async {
-    final session = _authSession;
+    final session = await _freshSession();
     if (session == null) return const [];
     try {
       final domains = await _customDomainClient.verifiedDomains(
@@ -1342,8 +1367,8 @@ class IdrTarget {
   // Custom domains (customer CNAME → this Target; Let's Encrypt via the agent)
   // ---------------------------------------------------------------------------
 
-  ({IdrAuthSession session, String fqhn}) _registeredTarget() {
-    final session = _authSession;
+  Future<({IdrAuthSession session, String fqhn})> _registeredTarget() async {
+    final session = await _freshSession();
     if (session == null) throw StateError('sign in first');
     final fqhn = registration?.verifiedFqhn;
     if (fqhn == null || fqhn.isEmpty) {
@@ -1354,8 +1379,8 @@ class IdrTarget {
 
   /// Add [domain] to this Target. Billing returns the CNAME target to give
   /// the customer and the first check result. Owners / admins of the bound org.
-  Future<CustomDomain> addCustomDomain(String domain) {
-    final t = _registeredTarget();
+  Future<CustomDomain> addCustomDomain(String domain) async {
+    final t = await _registeredTarget();
     return _customDomainClient.add(
       session: t.session,
       targetFqhn: t.fqhn,
@@ -1364,8 +1389,8 @@ class IdrTarget {
   }
 
   /// This Target's custom domains (removed ones left out).
-  Future<List<CustomDomain>> customDomains() {
-    final t = _registeredTarget();
+  Future<List<CustomDomain>> customDomains() async {
+    final t = await _registeredTarget();
     return _customDomainClient.list(session: t.session, targetFqhn: t.fqhn);
   }
 
@@ -1374,13 +1399,13 @@ class IdrTarget {
   Future<CustomDomain> verifyCustomDomain(String domain) async {
     final d = await _customDomainNamed(domain);
     return _customDomainClient.verify(
-        session: _registeredTarget().session, id: d.id);
+        session: (await _registeredTarget()).session, id: d.id);
   }
 
   Future<CustomDomain> removeCustomDomain(String domain) async {
     final d = await _customDomainNamed(domain);
     return _customDomainClient.remove(
-        session: _registeredTarget().session, id: d.id);
+        session: (await _registeredTarget()).session, id: d.id);
   }
 
   Future<CustomDomain> _customDomainNamed(String domain) async {
@@ -1414,6 +1439,7 @@ class IdrTarget {
   }
 
   Future<void> dispose() async {
+    await transfers.close();
     await stop();
     await _agent.dispose();
     await _authClient.dispose();

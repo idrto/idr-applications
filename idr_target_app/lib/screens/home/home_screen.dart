@@ -19,6 +19,7 @@ import 'approvals_section.dart';
 import 'domains_section.dart';
 import 'org_section.dart';
 import 'services_section.dart';
+import 'transfers_section.dart';
 
 /// Billing attention codes mean "fix it in the billing portal" (as in the CLI).
 const _billingCodes = {
@@ -85,6 +86,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final items = <IdrDashItem>[
       const IdrDashItem('overview', 'Overview', Icons.dashboard_outlined),
       const IdrDashItem('services', 'Services', Icons.dns_outlined),
+      const IdrDashItem('transfers', 'Transfers', Icons.swap_vert_outlined),
       if (_approver)
         IdrDashItem(
           'approvals',
@@ -105,6 +107,7 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
     final body = switch (_section) {
       'services' => ServicesSection(controller: c),
+      'transfers' => TransfersSection(transfers: c.target.transfers),
       'approvals' => ApprovalsSection(controller: c, onChanged: _tick),
       'tenants' => TenantsSection(controller: c),
       'domains' => DomainsSection(controller: c),

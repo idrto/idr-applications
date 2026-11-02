@@ -4,6 +4,7 @@ import 'package:idr_target/idr_target.dart';
 import 'core/billing.dart';
 import 'core/commands.dart';
 import 'core/doctor.dart';
+import 'core/transfer.dart';
 import 'menu.dart';
 import 'modes/enterprise.dart';
 import 'modes/personal.dart';
@@ -35,6 +36,7 @@ Future<int> runIdrtCli(List<String> args) => (CliRunner(
           ..addCommand(ServicesCommand())
           ..addCommand(BillingCommand())
           ..addCommand(SubscribeCommand())
+          ..addCommand(TransferCommand())
           ..addCommand(DoctorCommand())
           // Modes
           ..addCommand(PersonalCommand())

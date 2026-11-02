@@ -28,6 +28,11 @@ class TomlWriter {
     this.acmeWebroot,
     this.acmeCertDir,
     this.requireSourcePolicy = false,
+    this.fileTransferEnabled = false,
+    this.fileTransferReceiveDir,
+    this.fileTransferDataDir,
+    this.fileTransferInteractive = true,
+    this.fileTransferPermittedDirs = const [],
   });
 
   final String fqhn;
@@ -61,6 +66,13 @@ class TomlWriter {
   /// `[webrtc.policy].require_source_policy` (Enterprise): only Presence-verified
   /// Sources may open streams, limited to their zone's services.
   final bool requireSourcePolicy;
+
+  /// `[file_transfer]`; written only with a DP identity (binding needs it).
+  final bool fileTransferEnabled;
+  final String? fileTransferReceiveDir;
+  final String? fileTransferDataDir;
+  final bool fileTransferInteractive;
+  final List<String> fileTransferPermittedDirs;
 
   String toToml() {
     // Presence identity is `host--entity.idr.to` (email `@` ok) or classic dotted DNS.
@@ -168,6 +180,21 @@ class TomlWriter {
       buf.writeln('nginx_reload_command = ""');
     }
     buf.writeln();
+
+    final hasDp = dpIdentityPath != null && dpIdentityPath!.isNotEmpty;
+    if (fileTransferEnabled && hasDp && fileTransferReceiveDir != null) {
+      buf
+        ..writeln('[file_transfer]')
+        ..writeln('enabled = true')
+        ..writeln('receive_dir = "${_esc(fileTransferReceiveDir!)}"')
+        ..writeln('interactive = $fileTransferInteractive');
+      if (fileTransferDataDir != null) {
+        buf.writeln('data_dir = "${_esc(fileTransferDataDir!)}"');
+      }
+      buf
+        ..writeln('permitted_dirs = [${fileTransferPermittedDirs.map((d) => '"${_esc(d)}"').join(', ')}]')
+        ..writeln();
+    }
 
     for (final s in services) {
       buf

@@ -45,3 +45,4 @@ export 'src/state/target_state.dart';
 export 'src/status.dart';
 export 'src/tls/tls_status.dart';
 export 'src/tls/terminator.dart';
+export 'src/transfer/target_transfers.dart';

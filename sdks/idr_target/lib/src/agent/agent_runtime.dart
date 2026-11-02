@@ -56,7 +56,6 @@ class AgentRuntime {
   String? _jwtPath;
 
   Future<EntitlementToken?> Function()? _ensureFreshEntitlement;
-  _AgentStartArgs? _lastStart;
 
   void _setStatus(AgentRuntimeStatus s) {
     status = s;
@@ -80,14 +79,6 @@ class AgentRuntime {
     Future<EntitlementToken?> Function()? ensureFreshEntitlement,
   }) async {
     _ensureFreshEntitlement = ensureFreshEntitlement;
-    _lastStart = _AgentStartArgs(
-      verifiedFqhn: verifiedFqhn,
-      usingParty: usingParty,
-      services: services,
-      targetIdentityPem: targetIdentityPem,
-      targetIdentityPublicB64url: targetIdentityPublicB64url,
-      dpIdentityJson: dpIdentityJson,
-    );
 
     if (!File(config.agentBinaryPath).existsSync()) {
       idrLog('agent: binary missing at ${config.agentBinaryPath}');
@@ -149,6 +140,11 @@ class AgentRuntime {
       acmeWebroot: p.join(dir.path, 'acme', 'webroot'),
       acmeCertDir: acmeCertDir(dir),
       requireSourcePolicy: requireSourcePolicy?.call() ?? false,
+      fileTransferEnabled: config.fileTransfer.enabled,
+      fileTransferReceiveDir: config.fileTransfer.resolvedReceiveDir(),
+      fileTransferDataDir: p.join(dir.path, 'transfers'),
+      fileTransferInteractive: config.fileTransfer.interactive,
+      fileTransferPermittedDirs: config.fileTransfer.permittedDirs,
     );
     final toml = await writer.writeTo(dir);
     _configPath = toml.path;
@@ -171,7 +167,6 @@ class AgentRuntime {
       configPath: toml.path,
       workingDirectory: dir.path,
       injectEnv: injectEnv,
-      entitlementJwt: entitlement.token,
     );
     idrLog('agent: process started binary=${config.agentBinaryPath}');
 
@@ -187,16 +182,14 @@ class AgentRuntime {
       onRestart: () async {
         _setStatus(AgentRuntimeStatus.reconnecting);
         final fresh = await _ensureFreshEntitlement?.call();
-        final jwt = fresh?.token ?? entitlement.token;
         if (fresh != null) {
-          await File(jwtPath).writeAsString(jwt);
+          await File(jwtPath).writeAsString(fresh.token);
         }
         await _process!.start(
           binaryPath: config.agentBinaryPath,
           configPath: _configPath ?? toml.path,
           workingDirectory: dir.path,
           injectEnv: injectEnv,
-          entitlementJwt: jwt,
         );
         _setStatus(AgentRuntimeStatus.running);
       },
@@ -236,28 +229,15 @@ class AgentRuntime {
     );
   }
 
-  /// Dart reminted the JWT — write it and restart the agent so Presence
-  /// registration picks up the new token. Does not mint inside the agent.
+  /// Dart reminted the JWT: write it to the file the agent watches. The agent
+  /// re-registers with Presence on its own; restarting it would drop every
+  /// connected Source.
   Future<void> applyFreshEntitlement(EntitlementToken token) async {
     if (status == AgentRuntimeStatus.stopped) return;
-    final args = _lastStart;
-    if (args == null) return;
     final jwtPath = _jwtPath;
-    if (jwtPath != null) {
-      await File(jwtPath).writeAsString(token.token);
-    }
-    idrLog('agent: applying refreshed entitlement JWT');
-    await stop();
-    await start(
-      verifiedFqhn: args.verifiedFqhn,
-      usingParty: args.usingParty,
-      entitlement: token,
-      services: args.services,
-      targetIdentityPem: args.targetIdentityPem,
-      targetIdentityPublicB64url: args.targetIdentityPublicB64url,
-      dpIdentityJson: args.dpIdentityJson,
-      ensureFreshEntitlement: _ensureFreshEntitlement,
-    );
+    if (jwtPath == null) return;
+    await File(jwtPath).writeAsString(token.token);
+    idrLog('agent: wrote refreshed entitlement JWT');
   }
 
   Future<void> stop() async {
@@ -274,22 +254,4 @@ class AgentRuntime {
     await _process?.dispose();
     _process = null;
   }
-}
-
-class _AgentStartArgs {
-  const _AgentStartArgs({
-    required this.verifiedFqhn,
-    required this.usingParty,
-    required this.services,
-    required this.targetIdentityPem,
-    required this.targetIdentityPublicB64url,
-    this.dpIdentityJson,
-  });
-
-  final String verifiedFqhn;
-  final String usingParty;
-  final List<IdrServiceEntry> services;
-  final String targetIdentityPem;
-  final String targetIdentityPublicB64url;
-  final String? dpIdentityJson;
 }

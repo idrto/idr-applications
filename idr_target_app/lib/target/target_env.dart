@@ -57,4 +57,9 @@ IdrTargetConfig buildConfig() => IdrTargetConfig(
   ),
   agentBinaryPath: resolveAgentBinary() ?? agentBinaryName,
   mode: isDevMode ? IdrTargetMode.development : IdrTargetMode.production,
+  // "Accept to…" may pick any folder under the user's home (the user chose it
+  // in the native dialog); the agent re-checks every choice, links included.
+  fileTransfer: IdrFileTransferConfig(permittedDirs: [?_home]),
 );
+
+final String? _home = Platform.environment['USERPROFILE'] ?? Platform.environment['HOME'];

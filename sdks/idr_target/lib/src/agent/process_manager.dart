@@ -25,7 +25,6 @@ class ProcessManager {
     required String configPath,
     String? workingDirectory,
     Map<String, String>? injectEnv,
-    String? entitlementJwt,
   }) async {
     await stop();
     final bin = File(binaryPath);
@@ -44,9 +43,9 @@ class ProcessManager {
     if ((env['RUST_LOG'] ?? '').trim().isEmpty) {
       env['RUST_LOG'] = 'info';
     }
-    if (entitlementJwt != null && entitlementJwt.isNotEmpty) {
-      env['IDR_ENTITLEMENT_JWT'] = entitlementJwt;
-    }
+    // The agent reads the JWT from `[auth].entitlement_jwt_path` and watches it
+    // for refreshes; the env override would pin the first token.
+    env.remove('IDR_ENTITLEMENT_JWT');
     for (final e in (injectEnv ?? {}).entries) {
       final k = e.key.trim();
       final v = e.value.trim();

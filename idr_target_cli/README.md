@@ -13,6 +13,7 @@ Built on [`package:idr_target`](../sdks/idr_target). Plain `dart run`, no Flutte
 - [Registration: Personal](#registration-personal)
 - [Registration: Enterprise](#registration-enterprise)
 - [Registration: Service Provider](#registration-service-provider)
+- [File transfer](#file-transfer)
 - [Access policies](#access-policies)
 - [Revocation](#revocation)
 - [Billing](#billing)
@@ -84,8 +85,12 @@ Files:
 | Path | Contents |
 |---|---|
 | `%APPDATA%/to.idr/idrt/secure/auth.json` | Sign-in session, bound org, mode, **root and zone CA private keys** on an admin machine. Plain file: protect it like a key. |
-| `%APPDATA%/to.idr/idr_target/target.local.toml` | Agent config, rewritten on every `idrt start` |
-| `%APPDATA%/to.idr/idr_target/identity.dp.json` | This Target's approved certificate |
+| `%APPDATA%/to.idr/idrt/agent/target.local.toml` | Agent config, rewritten on every `idrt start` |
+| `%APPDATA%/to.idr/idrt/agent/identity.dp.json` | This Target's approved certificate |
+| `%APPDATA%/to.idr/idrt/agent/entitlement.jwt` | Short-lived subscription token for Presence. Renewed every few minutes while running; the agent picks up the new one without restarting. |
+| `%APPDATA%/to.idr/idrt/agent/transfers/` | File-transfer state and history |
+
+The Target GUI keeps its own agent files in `%APPDATA%/to.idr/idr_target/`, so `idrt` and the GUI can each run a Target on the same machine without overwriting each other.
 
 `target.local.toml` is generated. The settings you may want to know about:
 
@@ -114,6 +119,7 @@ Shared:
 | `idrt services list` | Configured services |
 | `idrt services add <name> <url> [--type http\|tcp] [--tls]` | Publish a local service |
 | `idrt services remove <name>` | Stop publishing it |
+| `idrt transfer peers\|send\|list\|status\|accept\|reject\|pause\|resume\|cancel\|retry-failed` | Receive files from Sources and send to them, through the running agent. See [File transfer](#file-transfer). |
 | `idrt billing [--status]` | Subscription state, then open the portal |
 | `idrt subscribe [--no-open]` | Straight to checkout |
 
@@ -349,8 +355,76 @@ What happens afterwards:
 - **Re-checks:** billing re-checks verified domains every 6 hours. If the CNAME is gone on two checks in a row, the domain becomes `failed` and stops routing to this Target.
 - **Development:** `IDR_MODE=development` uses Let's Encrypt's staging server; its certificates aren't trusted by browsers.
 - **Remove:** `idrt provider domain remove app.customer.com` stops routing within 5 minutes (Presence's cache); restart `idrt start` to drop the certificate request.
-- **Status file:** certificates and each domain's `acme-status.json` live in `%APPDATA%/to.idr/idr_target/acme/certs/<domain>/`.
+- **Status file:** certificates and each domain's `acme-status.json` live in `%APPDATA%/to.idr/idrt/agent/acme/certs/<domain>/` (Target GUI: `%APPDATA%/to.idr/idr_target/acme/certs/<domain>/`).
 - **HTTPS still needs nginx:** serving HTTPS on the custom domain needs an nginx on this machine that uses that certificate. Issuance doesn't.
+
+## File transfer
+
+A Target exchanges files and folders with the Sources connected to it, over the same peer-to-peer connection as its services. File transfer is on by default; there is nothing to configure.
+
+- Only **verified** Sources can transfer: a Source shows up once Presence has checked its certificate. Presence must run with `PRESENCE_SERVICE_TOKEN` set.
+- Interrupted transfers resume where they stopped, even after either side restarts.
+- Every file is checked by SHA-256 before it appears under its real name.
+
+The Source side needs its **Source agent** running (`source-agent run`); see the [Source README](../idr_sources_cli/README.md#file-transfer).
+
+### With the CLI
+
+`idrt start` must be running (in another terminal); `idrt transfer …` talks to that agent.
+
+**See who is connected:**
+
+```bash
+idrt transfer peers
+```
+
+Prints a `source` / `connection` table: each connected Source's **SKI** (device ID) and whether the connection is direct or relayed. A Source is listed only while its agent is connected. If the list is empty, see [Troubleshooting](#troubleshooting).
+
+**Receive from a Source.** Sources send with `idr transfer send --target <this-target>`. Each offer waits for you:
+
+```bash
+idrt transfer list                              # state "pending", with the file names and size
+idrt transfer accept <id>                       # into the receive folder
+idrt transfer accept <id> --out C:/Users/you/Downloads/IDR/project-x
+idrt transfer reject <id>
+```
+
+- The receive folder is `Downloads/IDR` in your home folder.
+- `--out` must be an existing folder inside the receive folder; anything else is refused.
+- Offers you don't answer expire after a while and are refused.
+
+**Send to a Source:**
+
+```bash
+idrt transfer send --source <ski> --file report.pdf --file photo.jpg
+idrt transfer send --source <ski> --dir ./dataset
+```
+
+- `<ski>` comes from `idrt transfer peers`.
+- `--file` can be repeated; `--dir` sends a whole folder, including subfolders, empty folders and empty files.
+- The Source's user accepts it with `idr transfer accept <id>`. Until then the transfer shows as `running`.
+
+**Manage transfers:**
+
+| Command | Does |
+|---|---|
+| `idrt transfer list` | All transfers and pending offers |
+| `idrt transfer status <id>` | State, contents, connection path and progress |
+| `idrt transfer pause <id>` / `resume <id>` | Pause or continue |
+| `idrt transfer cancel <id>` | Stop and remove the partial data |
+| `idrt transfer retry-failed <id>` | Re-send only the files that failed |
+
+Add `--json` for scripts. States: `queued`, `running`, `pending` (waiting for you), `waiting` (no connection; resumes by itself), `paused`, `completed`, `rejected`, `cancelled`, or a failure such as `storage_failed`.
+
+### With the Target GUI
+
+Start the Target, then open the **Transfers** tab:
+
+- **Send…** picks a connected Source (listed as direct or relayed), then **Choose files…** or **Choose folder…**. If it says *No Source is connected right now*, the Source's agent isn't running or isn't verified yet.
+- Incoming offers show **Accept**, **Accept to…** (pick a folder under your home folder) and **Reject**.
+- Each transfer shows its progress and can be paused, resumed or cancelled. To re-send only failed files, use `idrt transfer retry-failed <id>`.
+
+Accepted files land in `Downloads/IDR` unless you chose another folder.
 
 ## Access policies
 
@@ -444,6 +518,10 @@ Start with `idrt doctor`. Exit codes: `0` ok, `1` failure, `2` not signed in, `3
 | doctor: `target-agent … cannot start: a DLL it needs is missing` | OpenSSL 3 or the VC++ runtime is missing (Windows) | See [Build and distribute](../README.md#build-and-distribute) |
 | `discovery signature verify failed; insecure_dev continuing` | Presence was restarted with a new signing key | Harmless in dev; in production, update the discovery key |
 | A second agent on the same machine won't start | Both bind the metrics port `127.0.0.1:9091` | Run one agent per machine; give it all the services |
+| `target-agent is not running` (`idrt transfer …`) | `idrt start` isn't running, or another Target agent on this Windows account holds the local control pipe | Run `idrt start`. With the GUI's Target also running, stop one of them for transfers (one control pipe per Windows user). |
+| `idrt transfer peers` is empty / GUI says *No Source is connected right now* | No Source agent is connected, or Presence couldn't verify it (no `PRESENCE_SERVICE_TOKEN`) | Start `source-agent run` on the Source with this Target in `[daemon].targets`; start Presence with the token |
+| `accept --out …` refused | The folder doesn't exist or isn't inside the receive folder | Create it under `Downloads/IDR` |
+| A transfer stays `running` | The other side hasn't accepted yet | Accept it there (`idr transfer accept <id>`) |
 | Can't rebuild `idr_dp.dll` (file in use) | A running app (for example `target_app`) has it loaded | Close the app, or point `IDR_DP_LIB` at another build |
 | `'C:\install' is not recognized…` on Windows | The Flutter `dart` launcher breaks on arguments with spaces when Flutter is installed in a path with spaces | Call `…\flutter\bin\cache\dart-sdk\bin\dart.exe` directly |
 

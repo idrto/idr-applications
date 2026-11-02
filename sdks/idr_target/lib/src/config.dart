@@ -30,6 +30,37 @@ class IdrTlsConfig {
   final bool enableEntityCaLeaf;
 }
 
+/// File transfer with verified Sources (`[file_transfer]` in the agent config).
+///
+/// On by default and interactive: an offer waits until the user accepts or
+/// rejects it (`TargetTransfers.accept` / `reject`); nothing is stored without
+/// that. Needs the device's DP identity; without one the section is not written.
+class IdrFileTransferConfig {
+  const IdrFileTransferConfig({
+    this.enabled = true,
+    this.receiveDir,
+    this.interactive = true,
+    this.permittedDirs = const [],
+  });
+
+  final bool enabled;
+
+  /// Where accepted transfers land. Default: `Downloads/IDR` in the user's home.
+  final String? receiveDir;
+
+  /// False: headless; offers are denied unless a peer rule in the agent config allows them.
+  final bool interactive;
+
+  /// Other directories an accept may choose.
+  final List<String> permittedDirs;
+
+  String resolvedReceiveDir() {
+    if (receiveDir != null && receiveDir!.isNotEmpty) return receiveDir!;
+    final home = Platform.environment['USERPROFILE'] ?? Platform.environment['HOME'] ?? '.';
+    return '$home${Platform.pathSeparator}Downloads${Platform.pathSeparator}IDR';
+  }
+}
+
 /// Top-level SDK configuration.
 class IdrTargetConfig {
   IdrTargetConfig({
@@ -55,6 +86,7 @@ class IdrTargetConfig {
     this.maxAgentRestarts = 5,
     this.agentRestartInitialDelay = const Duration(seconds: 1),
     this.agentRestartMaxDelay = const Duration(seconds: 30),
+    this.fileTransfer = const IdrFileTransferConfig(),
   })  : controlPlaneUrl = controlPlaneUrl ??
             apiBaseUrl ??
             billingBaseUrl ??
@@ -98,6 +130,9 @@ class IdrTargetConfig {
   final int maxAgentRestarts;
   final Duration agentRestartInitialDelay;
   final Duration agentRestartMaxDelay;
+
+  /// File transfer with verified Sources.
+  final IdrFileTransferConfig fileTransfer;
 
   String get controlPlaneBase =>
       controlPlaneUrl.toString().replaceAll(RegExp(r'/$'), '');

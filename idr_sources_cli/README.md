@@ -13,6 +13,7 @@ Built on [`package:idr_source`](../sdks/idr_source).
 - [Registration: Personal](#registration-personal)
 - [Registration: Enterprise](#registration-enterprise)
 - [Registration: Service Provider](#registration-service-provider)
+- [File transfer](#file-transfer)
 - [Access policies: what the user sees](#access-policies-what-the-user-sees)
 - [Revocation: what the user sees](#revocation-what-the-user-sees)
 - [Billing](#billing)
@@ -95,6 +96,7 @@ Files:
 | `idr models` | Models of the active service (`*` marks the active one) |
 | `idr active [<service>] [--model m] [--prompt "…"]` | Activate a service (asks which one if omitted). Chat services open a REPL; `--prompt` sends one message and exits. |
 | `idr doctor [--connect [<target-fqhn>]]` | Check config, billing and Presence reachability, native libraries, sign-in and enrollment; `--connect` also opens a session to the Target |
+| `idr transfer send\|list\|status\|accept\|reject\|pause\|resume\|cancel\|retry-failed` | Send and receive files and folders. Needs `source-agent run`; see [File transfer](#file-transfer). |
 | `idr version` | CLI, SDK and Dart versions |
 
 Global flags (`--json`, `--no-color`, `--no-input`, `--verbose`), prompts and exit codes are shared with `idrt`: see [Common behavior](../README.md#common-behavior). `idr connect` prints the Target, the transport and the local port (always none: streams are in-process).
@@ -198,6 +200,155 @@ A provider runs the Target for your organization, which is the provider's tenant
 
 Service Provider mode has no zones: every approved Source sees every service on the tenant's Target.
 
+## File transfer
+
+Send files and folders to a Target, and receive them from it. Transfers run in the **Source agent** (`source-agent run`), a background process that keeps a session with each Target you list. It:
+
+- sends and receives over the same peer-to-peer connection as your services (no inbound ports);
+- survives drops: an interrupted transfer resumes where it stopped, even after a restart of either side;
+- verifies every file by SHA-256 before it is moved into place.
+
+`idr transfer …` only talks to that agent. If the agent isn't running, you get `source-agent is not running`.
+
+### Before you start
+
+- This machine is enrolled and approved (see [Registration](#registration-personal)), and `idr connect <target>` works.
+- The Target runs a Target agent with file transfer on (the default for `idrt start` and the Target GUI).
+- Presence runs with `PRESENCE_SERVICE_TOKEN` set. Without it, the Target can't verify this Source and refuses transfers (`Target refused peer binding` in the agent log).
+
+### 1. Build the Source agent
+
+From `agents_engine/agent`:
+
+```bash
+cargo build --release -p source-agent
+```
+
+You get `target/release/source-agent.exe` (or `source-agent`).
+
+### 2. Save this device's identity for the agent
+
+The agent proves who you are with the same key and certificate `idr enroll` created. `idr` keeps them in `%APPDATA%/idr/secure/auth.json` under `idr.source.identity`; copy that entry into a file of its own.
+
+PowerShell:
+
+```powershell
+$id = (Get-Content "$env:APPDATA\idr\secure\auth.json" -Raw | ConvertFrom-Json).'idr.source.identity'
+[IO.File]::WriteAllText("$env:APPDATA\idr\source-identity.json", $id)   # no BOM
+```
+
+Linux / macOS (needs `jq`):
+
+```bash
+jq -r '."idr.source.identity"' ~/.config/idr/secure/auth.json > ~/.config/idr/source-identity.json
+chmod 600 ~/.config/idr/source-identity.json
+```
+
+The file contains your **private key**. Keep it on this machine, never share or commit it, and redo this step after `idr enroll` issues a new certificate.
+
+### 3. Write the agent config
+
+Save it as, for example, `%APPDATA%/idr/source.toml`:
+
+```toml
+[source]
+source_id = "my-laptop"            # any label; shows in logs
+
+[presence]
+discovery_url = "http://127.0.0.1:8081/.well-known/idr-presence.json"
+discovery_key = ""                 # empty = dev (unsigned discovery accepted)
+
+[dp]
+identity_path = "C:/Users/you/AppData/Roaming/idr/source-identity.json"
+
+[daemon]
+data_dir = "C:/Users/you/AppData/Roaming/idr/source-agent"   # transfer queue and state
+targets = ["laptop--you@example.com.idr.to"]                  # Targets to stay connected to
+
+[file_transfer]
+enabled = true
+receive_dir = "C:/Users/you/Downloads/IDR"   # where accepted files land
+interactive = true                           # ask before accepting (see "Receiving")
+# permitted_dirs = ["D:/Shared"]             # other folders `accept --out` may use
+```
+
+| Setting | Meaning |
+|---|---|
+| `[daemon].targets` | Every Target this machine keeps a session with. You can only send to, and receive from, these. List several to use several Targets. |
+| `[file_transfer].enabled` | Off unless `true` |
+| `receive_dir` | Default folder for accepted transfers. Created if missing. |
+| `interactive` | `true`: incoming offers wait for `idr transfer accept`/`reject`. `false` (headless): offers are refused unless a peer rule allows them. |
+| `permitted_dirs` | Extra folders `accept --out` may write to. `receive_dir` and its subfolders are always allowed. |
+| `[[file_transfer.peers]]` `ski`, `auto_accept`, `auto_accept_max_bytes` | Accept offers from that Target automatically, up to a size |
+| `lease_minutes` | How long one authorization lasts (default 15, at least 5). The agent then re-authorizes through Presence; transfers pause for a moment and continue. |
+
+### 4. Run the agent
+
+Keep it running in its own terminal:
+
+```powershell
+source-agent --config "$env:APPDATA\idr\source.toml" run
+```
+
+(Linux / macOS: `source-agent --config ~/.config/idr/source.toml run`.)
+
+`session up fqhn=…` in its output means it is connected to that Target. Leave it running; it reconnects by itself when the network or the Target comes back.
+
+Point `idr` at the same agent and config in the shell where you run `idr transfer` (add these to your profile to keep them):
+
+```powershell
+$env:IDR_SOURCE_AGENT  = "C:\dev\idrto\agents_engine\agent\target\release\source-agent.exe"
+$env:IDR_SOURCE_CONFIG = "$env:APPDATA\idr\source.toml"
+```
+
+`IDR_SOURCE_AGENT` can be left unset when `source-agent` is on your `PATH`.
+
+From the interactive menu (`idr` with no arguments), once a Target is set:
+
+- **Send a file or folder to this Target** asks for one path and sends it (a folder is sent as a folder).
+- **File transfers** lists what's waiting for you, with **Accept**, **Accept … into a folder…** and **Reject** for each pending offer, plus **Show all transfers**. If the Source agent isn't running, it says so and how to start it.
+
+The commands below do the same, plus several files at once.
+
+### Sending to a Target
+
+```bash
+idr transfer send --target laptop--you@example.com --file report.pdf --file photo.jpg
+idr transfer send --target laptop--you@example.com --dir ./project
+```
+
+- Result: `Queued <id>.` The agent sends it in the background.
+- `--file` can be repeated; `--dir` sends a whole folder, including subfolders, empty folders and empty files.
+- The Target's owner then accepts it (`idrt transfer accept`, or **Accept** in the Target GUI). Until then the transfer shows as `running` (waiting for the Target).
+- Follow it with `idr transfer status <id>` or `idr transfer list`. It ends as `completed`.
+
+### Receiving from a Target
+
+When the Target sends you something, it appears as a pending offer:
+
+```bash
+idr transfer list                         # state "pending", with the file names and size
+idr transfer accept <id>                  # into receive_dir
+idr transfer accept <id> --out D:/Shared  # into a permitted folder
+idr transfer reject <id>
+```
+
+- `--out` must be an existing folder inside `receive_dir` or one of `permitted_dirs`; anything else is refused.
+- Offers you don't answer expire after a while and are refused.
+- Files are written to a hidden staging folder first and only appear under their real names once complete and verified.
+
+### Managing transfers
+
+| Command | Does |
+|---|---|
+| `idr transfer list` | All transfers and pending offers |
+| `idr transfer status <id>` | State, contents, connection path and progress |
+| `idr transfer pause <id>` / `resume <id>` | Pause or continue |
+| `idr transfer cancel <id>` | Stop and remove the partial data |
+| `idr transfer retry-failed <id>` | Re-send only the files that failed |
+
+Add `--json` for scripts. States: `queued`, `running`, `pending` (waiting for you), `waiting` (no connection; resumes by itself), `paused`, `completed`, `rejected`, `cancelled`, or a failure such as `storage_failed`.
+
 ## Access policies: what the user sees
 
 Policies are set by the root admin (`idrt enterprise zone policy`). On the Source:
@@ -257,6 +408,11 @@ Start with `idr doctor` (add `--connect` to test the whole path). Exit codes: `0
 | `The chat REPL needs an interactive terminal.` | Run from a script or pipe, or with `--no-input` | Use `--prompt "…"` |
 | `idr doctor` exits `5`, library `not found` | `idr_c_api` or `idr_dp` not found | Build them and copy them next to `idr`, or set `IDR_C_API_LIB` / `IDR_DP_LIB` |
 | `cannot load …: a library it depends on is missing` | On Windows, `idr_c_api.dll` needs OpenSSL 3 and the VC++ runtime | See [Build and distribute](../README.md#build-and-distribute) |
+| `source-agent is not running` (`idr transfer …`) | The Source agent isn't started, or `IDR_SOURCE_CONFIG` points at another config | Start `source-agent --config … run` and set `IDR_SOURCE_CONFIG` to the same file |
+| Agent log: `Target refused peer binding; transfers disabled on this session` | The Target couldn't verify this Source: Presence runs without `PRESENCE_SERVICE_TOKEN`, or the device was revoked | Start Presence with the token; check the device in `idrt … devices` |
+| Agent log: `DP identity file missing; continuing unenrolled` | `[dp].identity_path` is wrong, or the file was never exported | Redo [step 2](#2-save-this-devices-identity-for-the-agent) |
+| `idr transfer send` stays `running` | The Target hasn't accepted yet, or the Target isn't in `[daemon].targets` | Ask the Target to accept; add the FQHN to `targets` and restart the agent |
+| `accept --out …` refused | The folder doesn't exist or isn't inside `receive_dir` / `permitted_dirs` | Create it there, or add its parent to `permitted_dirs` |
 | `Missing <target-fqhn>.` (exit `64`) | No Target given and nothing to prompt with | Pass the Target, or run in a terminal |
 | `'C:\install' is not recognized…` on Windows | The Flutter `dart` launcher breaks on arguments with spaces when Flutter is installed in a path with spaces | Call `…\flutter\bin\cache\dart-sdk\bin\dart.exe` directly |
 

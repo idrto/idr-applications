@@ -71,6 +71,9 @@ IdrTarget createTarget() {
       ),
       agentBinaryPath: resolveAgentBinary() ?? agentBinaryName,
       mode: _isDev ? IdrTargetMode.development : IdrTargetMode.production,
+      // Own agent dir: the GUI's default one would share its config, identity,
+      // entitlement JWT and pid file, and the two Targets would overwrite each other.
+      configDirectory: p.join(cliDirectory.path, 'agent'),
     ),
     store: cliStore,
   );

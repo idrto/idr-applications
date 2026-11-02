@@ -11,6 +11,7 @@ import 'commands/logout.dart';
 import 'commands/models.dart';
 import 'commands/services.dart';
 import 'commands/status.dart';
+import 'commands/transfer.dart';
 import 'commands/version.dart';
 import 'menu.dart';
 
@@ -32,6 +33,7 @@ Future<int> runIdrCli(List<String> args) => (CliRunner(
           ..addCommand(ListCommand())
           ..addCommand(ModelsCommand())
           ..addCommand(ActiveCommand())
+          ..addCommand(TransferCommand())
           ..addCommand(DoctorCommand())
           ..addCommand(VersionCommand()))
         .execute(args, translate: translateSourceError);
