@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:idr_session/idr_session.dart' show IdrFlavor;
+
 /// Runtime mode for the Source SDK.
 enum IdrSourceMode {
   development,
@@ -35,47 +37,17 @@ class IdrSourceConfig {
 
   String get apiBase => apiBaseUrl.replaceAll(RegExp(r'/$'), '');
 
-  /// Mode defaults, then optional env overrides:
-  /// `IDR_API_BASE_URL`, `IDR_DISCOVERY_URL`, `IDR_C_API_LIB`.
-  factory IdrSourceConfig.defaults(IdrSourceMode mode) {
-    late final IdrSourceConfig base;
-    switch (mode) {
-      case IdrSourceMode.development:
-        base = const IdrSourceConfig(
-          mode: IdrSourceMode.development,
-          apiBaseUrl: 'http://127.0.0.1:3000',
-          discoveryUrl: 'http://127.0.0.1:8081/.well-known/idr-presence.json',
-          libraryPath: null,
-          insecureDev: true,
-          sourceRegion: 'local',
-        );
-      case IdrSourceMode.production:
-        // Production stubs — replace when shipping.
-        base = const IdrSourceConfig(
-          mode: IdrSourceMode.production,
-          apiBaseUrl: 'http://127.0.0.1:3000',
-          discoveryUrl: 'https://public.idr.to/.well-known/idr-presence.json',
-          libraryPath: null,
-          insecureDev: false,
-          sourceRegion: 'unknown',
-        );
-    }
-
-    final envApi = Platform.environment['IDR_API_BASE_URL']?.trim();
-    final envDiscovery = Platform.environment['IDR_DISCOVERY_URL']?.trim();
+  /// [flavor]'s billing + discovery URLs; env overrides `IDR_API_BASE_URL`,
+  /// `IDR_DISCOVERY_URL`, `IDR_C_API_LIB` (see [IdrFlavor]).
+  factory IdrSourceConfig.forFlavor(IdrFlavor flavor) {
     final envLib = Platform.environment['IDR_C_API_LIB']?.trim();
-
     return IdrSourceConfig(
-      mode: base.mode,
-      apiBaseUrl:
-          (envApi != null && envApi.isNotEmpty) ? envApi : base.apiBaseUrl,
-      discoveryUrl: (envDiscovery != null && envDiscovery.isNotEmpty)
-          ? envDiscovery
-          : base.discoveryUrl,
-      libraryPath:
-          (envLib != null && envLib.isNotEmpty) ? envLib : base.libraryPath,
-      insecureDev: base.insecureDev,
-      sourceRegion: base.sourceRegion,
+      mode: flavor.isDev ? IdrSourceMode.development : IdrSourceMode.production,
+      apiBaseUrl: flavor.controlPlaneUrl('IDR_API_BASE_URL'),
+      discoveryUrl: flavor.discoveryUrl,
+      libraryPath: (envLib != null && envLib.isNotEmpty) ? envLib : null,
+      insecureDev: flavor.isDev,
+      sourceRegion: flavor.isDev ? 'local' : 'unknown',
     );
   }
 }

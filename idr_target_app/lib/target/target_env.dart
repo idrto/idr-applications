@@ -1,22 +1,11 @@
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:idr_target/idr_target.dart';
 import 'package:path/path.dart' as p;
 
-/// Environment contract shared with `idrt` (same variable names and defaults).
-String _env(String key, String fallback) {
-  final v = Platform.environment[key]?.trim();
-  return v == null || v.isEmpty ? fallback : v;
-}
-
-bool get isDevMode =>
-    _env('IDR_MODE', kReleaseMode ? 'production' : 'development') !=
-    'production';
-
-/// Billing portal origin (`IDR_BILLING_PORTAL_URL`; dev default is the Vite port).
-String get portalBaseUrl =>
-    _env('IDR_BILLING_PORTAL_URL', isDevMode ? 'http://localhost:5173' : '');
+/// Billing portal origin for this build's flavor (`IDR_BILLING_PORTAL_URL`).
+/// Same flavor table and env overrides as `idrt` ([IdrFlavor]).
+String get portalBaseUrl => IdrFlavor.current.billingPortalUrl;
 
 String get agentBinaryName =>
     Platform.isWindows ? 'target-agent.exe' : 'target-agent';
@@ -52,11 +41,12 @@ String? resolveAgentBinary() {
 }
 
 IdrTargetConfig buildConfig() => IdrTargetConfig(
-  controlPlaneUrl: Uri.parse(
-    _env('IDR_CONTROL_PLANE_URL', 'http://127.0.0.1:3000'),
-  ),
+  controlPlaneUrl: Uri.parse(IdrFlavor.current.controlPlaneUrl()),
+  discoveryUrl: IdrFlavor.current.discoveryUrl,
   agentBinaryPath: resolveAgentBinary() ?? agentBinaryName,
-  mode: isDevMode ? IdrTargetMode.development : IdrTargetMode.production,
+  mode: IdrFlavor.current.isDev
+      ? IdrTargetMode.development
+      : IdrTargetMode.production,
   // "Accept to…" may pick any folder under the user's home (the user chose it
   // in the native dialog); the agent re-checks every choice, links included.
   fileTransfer: IdrFileTransferConfig(permittedDirs: [?_home]),

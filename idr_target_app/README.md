@@ -9,5 +9,5 @@ services, custom domains (CNAME + Let's Encrypt), enterprise zones/members/devic
 - `lib/screens/` pre-home flow (sign-in, mode, billing, register) and the home sections.
 - `lib/ui/` copied design-system widgets (no dependency on `idr_ui_views`).
 
-Run: `flutter run -d windows`. Needs billing, Presence, `target-agent` and `idr_dp`
+Run: `flutter run -d windows` (dev flavor and `%APPDATA%	o.idr-dev` state; a release build defaults to prod, see Flavors in `../README.md`). Needs billing, Presence, `target-agent` and `idr_dp`
 (see `../idr_target_cli/README.md`). Tests: `flutter test`.

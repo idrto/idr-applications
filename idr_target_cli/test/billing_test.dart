@@ -16,6 +16,8 @@ class _MemoryStorage implements BillingAuthStorage {
 
 void main() {
   const personal = IdrBusinessPlan.personal;
+  // In-process, like `idrt --flavor dev` (portal URL from config/dev.json).
+  setUpAll(() => IdrFlavor.current = IdrFlavor.load('dev'));
 
   test('personal deep-links the shop to its addonCode', () {
     expect(portalPaths(personal).subscribe, '/shop/idr_personal_bundle');

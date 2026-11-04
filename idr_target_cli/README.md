@@ -67,13 +67,12 @@ Services that must be running (dev):
 
 ## Configuration
 
-Environment variables:
+`--flavor dev|staging|prod` (default: prod for a release build, dev under `dart run`; see Flavors in `../README.md`) sets the endpoints and the state folder (`to.idr`, `to.idr-dev`, …). Environment variables override it:
 
-| Variable | Default (dev) | Purpose |
+| Variable | Default (dev flavor) | Purpose |
 |---|---|---|
-| `IDR_MODE` | `development` | `production` for live endpoints |
 | `IDR_CONTROL_PLANE_URL` | `http://127.0.0.1:3000` | Billing / auth API |
-| `IDR_BILLING_PORTAL_URL` | `http://localhost:5173` | Portal links. Required in production. |
+| `IDR_BILLING_PORTAL_URL` | `http://localhost:5173` | Portal links |
 | `IDR_TARGET_AGENT` | next to `idrt`, then `PATH`, then the repo build | Path to the agent binary |
 | `IDR_DP_LIB` | next to `idrt`, then the repo build | Path to `idr_dp` (certificate crypto) |
 | `IDR_DISCOVERY_URL` | `http://127.0.0.1:8081/.well-known/idr-presence.json` | Presence discovery |
@@ -354,7 +353,7 @@ What happens afterwards:
 
 - **Renewal:** the agent renews 30 days before expiry, on its own.
 - **Re-checks:** billing re-checks verified domains every 6 hours. If the CNAME is gone on two checks in a row, the domain becomes `failed` and stops routing to this Target.
-- **Development:** `IDR_MODE=development` uses Let's Encrypt's staging server; its certificates aren't trusted by browsers.
+- **Development:** the dev flavor (`idrt --flavor dev`) uses Let's Encrypt's staging server; its certificates aren't trusted by browsers.
 - **Remove:** `idrt provider domain remove app.customer.com` stops routing within 5 minutes (Presence's cache); restart `idrt start` to drop the certificate request.
 - **Status file:** certificates and each domain's `acme-status.json` live in `%APPDATA%/to.idr/idr_target/acme/certs/<domain>/` (shared with the Target GUI).
 - **HTTPS still needs nginx:** serving HTTPS on the custom domain needs an nginx on this machine that uses that certificate. Issuance doesn't.

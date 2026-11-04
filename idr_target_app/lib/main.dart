@@ -6,7 +6,10 @@ import 'screens/home/home_screen.dart';
 import 'target/target_controller.dart';
 import 'ui/theme/idr_theme.dart';
 
-void main() {
+/// `--flavor dev|staging|prod` picks `config/<name>.json`; without it a
+/// release build is prod and `flutter run` is dev ([IdrFlavor.defaultName]).
+void main(List<String> args) {
+  IdrFlavor.init(args);
   runApp(const TargetApp());
 }
 

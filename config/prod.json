@@ -1,0 +1,6 @@
+{
+  "controlPlane": "https://billing.idr.to",
+  "discovery": "https://public.idr.to/.well-known/idr-presence.json",
+  "billingPortal": "https://billing.idr.to",
+  "dev": false
+}

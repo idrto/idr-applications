@@ -9,12 +9,15 @@ import 'package:idr_session/idr_session.dart';
 
 /// This machine's Target, shared by the Target GUI and `idrt`: agent files
 /// here, sign-in and identity in [targetStoreFile].
-/// `%APPDATA%/to.idr/idr_target` (`$HOME/to.idr/idr_target` elsewhere).
+/// `%APPDATA%/to.idr/idr_target` (`$HOME/to.idr/idr_target` elsewhere);
+/// `to.idr-dev`, `to.idr-staging` for those flavors ([IdrFlavor.current]).
 Directory get defaultTargetDirectory {
   final home = Platform.environment['APPDATA'] ??
       Platform.environment['HOME'] ??
       '.';
-  return Directory(p.join(home, 'to.idr', 'idr_target'));
+  return Directory(
+    p.join(home, 'to.idr${IdrFlavor.current.stateSuffix}', 'idr_target'),
+  );
 }
 
 /// The Target's sign-in session, bound org, identity and CA keys

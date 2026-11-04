@@ -9,7 +9,7 @@ const idrSourceVersion = '0.1.0';
 /// Restore state, run [body], always dispose (closes any live connection).
 Future<T> withSource<T>(Future<T> Function(IdrSource source) body) async {
   final source = IdrSource(
-    config: IdrSourceConfig.defaults(IdrSourceMode.development),
+    config: IdrSourceConfig.forFlavor(IdrFlavor.current),
     prefs: createCliPrefs(),
   );
   try {

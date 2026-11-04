@@ -11,7 +11,7 @@ export 'package:two_key_dart_sdk/two_key_headless.dart'
 
 export 'package:idr_service_http/idr_service_http.dart' show ChatTurn;
 export 'package:idr_session/idr_session.dart'
-    show FileAuthStorage, IdrAuthSession;
+    show FileAuthStorage, IdrAuthSession, IdrFlavor, idrSourceDirectory;
 
 export 'src/catalog/service_selection.dart';
 export 'src/config.dart';

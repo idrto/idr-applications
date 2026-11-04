@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:idr_session/idr_session.dart' show idrSourceDirectory;
 import 'package:path/path.dart' as p;
 
 /// Optional non-secret prefs (last FQHN / active service / model).
@@ -45,14 +46,7 @@ class FileSourcePrefs implements SourcePrefs {
 
   final Directory _directory;
 
-  static Directory defaultDirectory() {
-    final appData = Platform.environment['APPDATA'];
-    if (appData != null && appData.isNotEmpty) {
-      return Directory(p.join(appData, 'idr'));
-    }
-    final home = Platform.environment['HOME'] ?? '.';
-    return Directory(p.join(home, '.config', 'idr'));
-  }
+  static Directory defaultDirectory() => idrSourceDirectory;
 
   File get _file => File(p.join(_directory.path, 'prefs.json'));
 

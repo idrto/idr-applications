@@ -6,25 +6,19 @@ import 'package:path/path.dart' as p;
 
 import 'zones.dart';
 
-String _env(String key, String fallback) {
-  final v = Platform.environment[key]?.trim();
-  return v == null || v.isEmpty ? fallback : v;
-}
+/// Billing portal origin for this build's flavor (`IDR_BILLING_PORTAL_URL`).
+String get portalBaseUrl => IdrFlavor.current.billingPortalUrl;
 
-bool get _isDev => _env('IDR_MODE', 'development') != 'production';
-
-/// Billing portal origin (`IDR_BILLING_PORTAL_URL`; dev default Vite port).
-String get portalBaseUrl =>
-    _env('IDR_BILLING_PORTAL_URL', _isDev ? 'http://localhost:5173' : '');
-
-/// CLI state dir: `%APPDATA%/to.idr/idrt` or `~/.config/to.idr/idrt`.
+/// CLI state dir: `%APPDATA%/to.idr/idrt` or `~/.config/to.idr/idrt`
+/// (`to.idr-dev`, … per flavor).
 Directory get cliDirectory {
+  final name = 'to.idr${IdrFlavor.current.stateSuffix}';
   final appData = Platform.environment['APPDATA'];
   if (appData != null && appData.isNotEmpty) {
-    return Directory(p.join(appData, 'to.idr', 'idrt'));
+    return Directory(p.join(appData, name, 'idrt'));
   }
   return Directory(
-    p.join(Platform.environment['HOME'] ?? '.', '.config', 'to.idr', 'idrt'),
+    p.join(Platform.environment['HOME'] ?? '.', '.config', name, 'idrt'),
   );
 }
 
@@ -62,11 +56,12 @@ String? resolveAgentBinary() {
 IdrTarget createTarget() {
   return IdrTarget(
     config: IdrTargetConfig(
-      controlPlaneUrl: Uri.parse(
-        _env('IDR_CONTROL_PLANE_URL', 'http://127.0.0.1:3000'),
-      ),
+      controlPlaneUrl: Uri.parse(IdrFlavor.current.controlPlaneUrl()),
+      discoveryUrl: IdrFlavor.current.discoveryUrl,
       agentBinaryPath: resolveAgentBinary() ?? agentBinaryName,
-      mode: _isDev ? IdrTargetMode.development : IdrTargetMode.production,
+      mode: IdrFlavor.current.isDev
+          ? IdrTargetMode.development
+          : IdrTargetMode.production,
       // Agent files in the SDK default dir, shared with the GUI: one Target per
       // machine, and only one app runs its agent at a time.
     ),

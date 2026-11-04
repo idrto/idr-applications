@@ -10,7 +10,7 @@ late String exe;
 late Directory tmp;
 
 Future<ProcessResult> idr(List<String> args, [Map<String, String>? env]) =>
-    Process.run(exe, args, environment: {
+    Process.run(exe, ['--flavor=dev', ...args], environment: {
       'APPDATA': tmp.path,
       'HOME': tmp.path,
       'IDR_API_BASE_URL': 'http://127.0.0.1:1',

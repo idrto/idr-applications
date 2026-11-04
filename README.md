@@ -74,6 +74,28 @@ Both CLIs are built on [`idr_cli_core`](idr_cli_core), so flags, output and exit
 | `64` | Bad command line, or a required value is missing in a non-interactive run |
 | `70` | Unexpected error (a bug): rerun with `--verbose` |
 
+## Flavors
+
+One executable per app serves every environment. `--flavor <name>` picks it at start and loads `config/<name>.json`. Without the flag a compiled release build (`dart build cli`, `flutter build windows --release`, every CI artifact) is `prod`, and a run from source (`dart run`, `flutter run`) is `dev`; each flavor also keeps its own local state, so a dev run never touches a prod sign-in or Target identity.
+
+```bash
+idrt --flavor dev status
+```
+```bash
+idr --flavor=staging doctor
+```
+```bash
+flutter run -d windows -a --flavor=dev
+```
+
+| Flavor | Backend (`config/<name>.json`) | State folders |
+|---|---|---|
+| `prod` | `https://billing.idr.to` (API under `/api/*`, portal at `/`), `https://public.idr.to` | `%APPDATA%\idr`, `%APPDATA%	o.idr` |
+| `staging` | not set yet: pass the env vars below | `%APPDATA%\idr-staging`, `%APPDATA%	o.idr-staging` |
+| `dev` | `127.0.0.1:3000`, `127.0.0.1:8081`, portal `localhost:5173` | `%APPDATA%\idr-dev`, `%APPDATA%	o.idr-dev` |
+
+`config/` is looked up next to the executable first (CI ships only `config/prod.json` there), then upward from the working directory, so a repo checkout finds `applications/apps/config/`. Keys: `controlPlane`, `discovery`, `billingPortal`, `dev` (local stack: development mode, insecure Presence). For one run, `IDR_CONTROL_PLANE_URL` (`IDR_API_BASE_URL` for `idr`), `IDR_DISCOVERY_URL` and `IDR_BILLING_PORTAL_URL` override the file; a flavor with no URL and no env var stops with an error naming the variable.
+
 ## Build and distribute
 
 `dart compile exe` **does not work** for these CLIs: a transitive dependency (`objective_c`, via `path_provider`) has a build hook, and `dart compile` refuses packages with build hooks. Use `dart build cli` instead. It produces the same kind of self-contained executable; the Dart SDK isn't needed to run it.
@@ -95,7 +117,7 @@ On Windows, if Flutter is installed in a path with spaces, call the SDK's `dart.
    ```bash
    cd applications/apps/idr_target_cli && dart pub get && dart build cli -o build/idrt
    ```
-   The executable lands in `build/<cli>/bundle/bin/`. `dart build cli` wipes that folder on every build, so copy the native files in afterwards.
+   The executable lands in `build/<cli>/bundle/bin/`; copy `applications/apps/config/` next to it (see [Flavors](#flavors)). `dart build cli` wipes that folder on every build, so copy the native files in afterwards.
 3. **Put the native files next to the executable** in `bundle/bin/`:
 
    | CLI | Files (Windows names; `lib….so` on Linux, `lib….dylib` on macOS) |
@@ -127,8 +149,8 @@ Configuration and state (there is no config file; endpoints come from environmen
 
 | CLI | Where | What |
 |---|---|---|
-| `idr` | `%APPDATA%\idr\` (Windows), `~/.config/idr/` | `secure/auth.json` (session, device private key and certificate), `prefs.json` |
-| `idrt` and the Target GUI (shared) | `%APPDATA%\to.idr\idr_target\` (`$HOME/to.idr/idr_target/` elsewhere) | `secure/auth.json` (session, bound org, identity, CA private keys on admin machines), agent config, certificate, agent database |
+| `idr` | `%APPDATA%\idr\` (Windows), `~/.config/idr/`; `idr-dev`, `idr-staging` for those flavors | `secure/auth.json` (session, device private key and certificate), `prefs.json` |
+| `idrt` and the Target GUI (shared) | `%APPDATA%\to.idr\idr_target\` (`$HOME/to.idr/idr_target/` elsewhere); `to.idr-dev`, `to.idr-staging` for those flavors | `secure/auth.json` (session, bound org, identity, CA private keys on admin machines), agent config, certificate, agent database |
 | `idrt` | `%APPDATA%\to.idr\idrt\`, `~/.config/to.idr/idrt/` | `orgs.json` (org picker history) |
 
 `auth.json` is encrypted with Windows DPAPI (readable only by your Windows account); on Linux / macOS it is plain JSON with mode 0600.
@@ -141,4 +163,4 @@ Configuration and state (there is no config file; endpoints come from environmen
 - **Zone members need the organization owner.** Billing's `credential-list` (owner only) now returns each device's `zone`, so `idrt enterprise devices` has a zone column and a zone's view lists its member Targets and Sources. For anyone else, billing refuses the list and the CLI says so instead of guessing.
 - **Zone names, zone admins and devices recorded here are local** to the admin machine's org graph; billing records zone certificates and policies (zones issued from another admin machine appear as "issued elsewhere").
 - **Completion** works in bash and zsh only.
-- **Production endpoints** are still SDK stubs (`IdrSourceMode.production` points billing at localhost), so both CLIs run in development mode.
+- **One running Target agent per Windows user across flavors.** State is separate per flavor, but `target-agent`'s local IPC pipe name (`idr-target-agent-<user SID>`) isn't: while a dev agent runs, starting the prod one reports `AGENT_ALREADY_RUNNING`.

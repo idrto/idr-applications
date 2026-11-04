@@ -16,7 +16,7 @@ dependencies:
 
 ```dart
 final source = IdrSource(
-  config: IdrSourceConfig.defaults(IdrSourceMode.development),
+  config: IdrSourceConfig.forFlavor(IdrFlavor.current),
   // CLI default is FileAuthStorage(); Flutter apps pass
   // SecureBillingAuthStorage(storagePrefix: IdrSource.storagePrefix).
   prefs: FileSourcePrefs(),
@@ -32,12 +32,13 @@ final reply = await source.chat('hello', history: const []);
 
 ## Config
 
-`IdrSourceConfig.defaults(mode)` sets billing + discovery URLs:
+`IdrSourceConfig.forFlavor(flavor)` takes billing + discovery URLs from the run's flavor (`IdrFlavor` in `idr_session`; the app's `main` calls `IdrFlavor.init(args)`, which reads `--flavor` and `config/<name>.json`):
 
-| Mode | API | Discovery |
+| Flavor | API | Discovery |
 |------|-----|-----------|
-| `development` | `http://127.0.0.1:3000` | `http://127.0.0.1:8081/.well-known/idr-presence.json` |
-| `production` | `https://billing.idr.to` | `https://public.idr.to/.well-known/idr-presence.json` |
+| `dev` | `http://127.0.0.1:3000` | `http://127.0.0.1:8081/.well-known/idr-presence.json` |
+| `staging` | not set yet (env vars required) | not set yet |
+| `prod` | `https://billing.idr.to` | `https://public.idr.to/.well-known/idr-presence.json` |
 
 Optional env overrides: `IDR_API_BASE_URL`, `IDR_DISCOVERY_URL`, `IDR_C_API_LIB`.
 

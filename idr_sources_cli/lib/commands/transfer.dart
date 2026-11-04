@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:args/command_runner.dart';
 import 'package:idr_cli_core/idr_cli_core.dart';
+import 'package:idr_source/idr_source.dart' show idrSourceDirectory;
 
 
 /// `idr transfer …`: file transfer owned by the running `source-agent`.
@@ -55,14 +56,11 @@ String sourceAgentExecutable() {
 }
 
 /// The agent's config: `IDR_SOURCE_CONFIG`, else `%APPDATA%/idr/source.toml`
-/// (`~/.config/idr/source.toml`) when it exists.
+/// (`~/.config/idr/source.toml`; per flavor) when it exists.
 String? sourceAgentConfig() {
   final env = Platform.environment['IDR_SOURCE_CONFIG']?.trim();
   if (env != null && env.isNotEmpty) return env;
-  final appData = Platform.environment['APPDATA'];
-  final f = appData != null && appData.isNotEmpty
-      ? _join([appData, 'idr', 'source.toml'])
-      : _join([Platform.environment['HOME'] ?? '.', '.config', 'idr', 'source.toml']);
+  final f = _join([idrSourceDirectory.path, 'source.toml']);
   return File(f).existsSync() ? f : null;
 }
 

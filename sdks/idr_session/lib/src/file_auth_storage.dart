@@ -8,6 +8,8 @@ import 'package:ffi/ffi.dart';
 import 'package:path/path.dart' as p;
 import 'package:two_key_dart_sdk/two_key_headless.dart';
 
+import 'flavor.dart';
+
 /// [BillingAuthStorage] as one file (CLI / headless; no Flutter).
 ///
 /// Windows: the JSON is encrypted with DPAPI (only this Windows user can read
@@ -31,13 +33,8 @@ class FileAuthStorage implements BillingAuthStorage {
   /// File locks don't exclude callers within one process: queue them here.
   Future<void> _queue = Future<void>.value();
 
-  static File _defaultFile() {
-    final appData = Platform.environment['APPDATA'];
-    final dir = (appData != null && appData.isNotEmpty)
-        ? p.join(appData, 'idr', 'secure')
-        : p.join(Platform.environment['HOME'] ?? '.', '.config', 'idr', 'secure');
-    return File(p.join(dir, 'auth.json'));
-  }
+  static File _defaultFile() =>
+      File(p.join(idrSourceDirectory.path, 'secure', 'auth.json'));
 
   @override
   Future<String?> getItem(String key) => _locked((m) => m[key], write: false);

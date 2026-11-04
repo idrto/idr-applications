@@ -36,7 +36,12 @@ void main() {
     final storage = _MemStorage()..map[identityKey] = '{"ski":"member"}';
     final auth = _FakeAuthClient();
     final source = IdrSource(
-      config: IdrSourceConfig.defaults(IdrSourceMode.development),
+      config: IdrSourceConfig.forFlavor(const IdrFlavor(
+        name: 'dev',
+        isDev: true,
+        controlPlane: 'http://127.0.0.1:3000',
+        discovery: 'http://127.0.0.1:8081/.well-known/idr-presence.json',
+      )),
       authStorage: storage,
       authClient: auth,
     );

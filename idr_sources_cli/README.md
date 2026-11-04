@@ -64,9 +64,9 @@ The Source needs the billing server and Presence running, and a Target online. S
 
 ## Configuration
 
-There is no config file to write: development endpoints are the default. Overrides:
+There is no config file to write: `--flavor dev|staging|prod` (default: prod for a release build, dev under `dart run`; see Flavors in `../README.md`) sets the endpoints and the state folder (`idr`, `idr-dev`, …). Overrides:
 
-| Variable | Default (dev) | Purpose |
+| Variable | Default (dev flavor) | Purpose |
 |---|---|---|
 | `IDR_API_BASE_URL` | `http://127.0.0.1:3000` | Billing / auth API |
 | `IDR_DISCOVERY_URL` | `http://127.0.0.1:8081/.well-known/idr-presence.json` | Presence discovery |
