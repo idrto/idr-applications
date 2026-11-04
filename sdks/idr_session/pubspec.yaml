@@ -7,6 +7,11 @@ environment:
   sdk: ">=3.3.0 <4.0.0"
 
 dependencies:
+  # DPAPI (Windows) for FileAuthStorage; already resolved transitively.
+  ffi: ^2.1.0
   path: ^1.9.0
   two_key_dart_sdk:
     path: ../../../../Auth_repo/2key-billing-sdks/packages/dart
+
+dev_dependencies:
+  test: ^1.25.0

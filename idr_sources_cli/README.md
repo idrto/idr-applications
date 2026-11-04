@@ -79,7 +79,7 @@ Files:
 
 | Path | Contents |
 |---|---|
-| `%APPDATA%/idr/secure/auth.json` (or `~/.config/idr/secure/auth.json`) | Sign-in session and the device identity: **private key** and certificate chain. Plain file: protect it like a key. |
+| `%APPDATA%/idr/secure/auth.json` (or `~/.config/idr/secure/auth.json`) | Sign-in session and the device identity: **private key** and certificate chain. Encrypted with DPAPI on Windows; plain JSON (mode 0600) elsewhere: protect it like a key. |
 | `%APPDATA%/idr/prefs.json` | Last Target FQHN, active service, active model |
 
 ## Commands
@@ -233,7 +233,11 @@ The agent proves who you are with the same key and certificate `idr enroll` crea
 PowerShell:
 
 ```powershell
-$id = (Get-Content "$env:APPDATA\idr\secure\auth.json" -Raw | ConvertFrom-Json).'idr.source.identity'
+# auth.json is DPAPI-encrypted: decrypt it as your Windows user.
+Add-Type -AssemblyName System.Security
+$raw = [IO.File]::ReadAllBytes("$env:APPDATA\idr\secure\auth.json")
+$json = [Text.Encoding]::UTF8.GetString([Security.Cryptography.ProtectedData]::Unprotect($raw, $null, 'CurrentUser'))
+$id = ($json | ConvertFrom-Json).'idr.source.identity'
 [IO.File]::WriteAllText("$env:APPDATA\idr\source-identity.json", $id)   # no BOM
 ```
 

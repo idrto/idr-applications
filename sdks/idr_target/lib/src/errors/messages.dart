@@ -78,6 +78,9 @@ abstract final class IdrTargetErrorMessages {
       'Sign-in timed out. Try again and complete Google sign-in in the browser.';
   static const agentCrashBudgetExceeded =
       'target-agent crashed too many times.';
+  static const agentAlreadyRunning =
+      'This Target is already running (started from the Target app or `idrt start`). '
+      'Stop it there first.';
   static const noLoginProviders =
       'No sign-in methods are configured on Auth. '
       'Add SSO credentials on the server and try again.';
@@ -200,6 +203,8 @@ abstract final class IdrTargetErrorMessages {
         return 'target-agent binary not found. Build it and update the path.';
       case IdrTargetErrorCode.agentCrashBudgetExceeded:
         return agentCrashBudgetExceeded;
+      case IdrTargetErrorCode.agentAlreadyRunning:
+        return agentAlreadyRunning;
       case IdrTargetErrorCode.tlsKeyMissing:
         return tlsKeyMissing;
       case IdrTargetErrorCode.certIssueFailed:

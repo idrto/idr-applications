@@ -37,6 +37,7 @@ enum IdrTargetErrorCode {
   fqhnUnverified('FQHN_UNVERIFIED'),
   agentBinaryMissing('AGENT_BINARY_MISSING'),
   agentCrashBudgetExceeded('AGENT_CRASH_BUDGET_EXCEEDED'),
+  agentAlreadyRunning('AGENT_ALREADY_RUNNING'),
   tlsKeyMissing('TLS_KEY_MISSING'),
   certIssueFailed('CERT_ISSUE_FAILED'),
   terminatorReloadFailed('TERMINATOR_RELOAD_FAILED'),

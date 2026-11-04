@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 
+import 'transfer/agent_ipc.dart';
 import 'transfer/target_transfers.dart';
 import 'package:two_key_dart_sdk/two_key_headless.dart';
 
@@ -460,10 +461,7 @@ class IdrTarget {
     if (config.configDirectory != null) {
       return Directory(config.configDirectory!);
     }
-    final home = Platform.environment['APPDATA'] ??
-        Platform.environment['HOME'] ??
-        '.';
-    return Directory(p.join(home, 'to.idr', 'idr_target'));
+    return defaultTargetDirectory;
   }
 
   void _setStatus(IdrTargetStatus s) {
@@ -1327,6 +1325,15 @@ class IdrTarget {
       );
       return;
     }
+    // The GUI and `idrt` share this Target: only one of them runs its agent.
+    if (await _agentRunningElsewhere()) {
+      idrLog('startAgent: stop — target-agent already running (GUI or idrt)');
+      _setAttention(const IdrTargetAttention(
+        code: IdrTargetErrorCode.agentAlreadyRunning,
+        message: IdrTargetMessages.agentAlreadyRunning,
+      ));
+      return;
+    }
 
     idrLog(
       'startAgent: fqhn=${reg.verifiedFqhn} discovery=${config.discoveryUrl}',
@@ -1343,6 +1350,28 @@ class IdrTarget {
       ensureFreshEntitlement: _entitlement.ensureFresh,
     );
     idrLog('startAgent: agent status=${_agent.status}');
+  }
+
+  /// Whether a target-agent of this user already answers on its local IPC.
+  /// ponytail: the IPC endpoint exists only with file transfer on; with it
+  /// off a second agent isn't detected.
+  Future<bool> _agentRunningElsewhere() async {
+    if (_agent.status != AgentRuntimeStatus.stopped) return false;
+    final ipc = AgentIpc(
+      agent: 'target-agent',
+      dataDir: p.join(configDir.path, 'transfers'),
+    );
+    try {
+      await ipc.call({'cmd': 'peers'});
+      return true;
+    } on AgentIpcException catch (e) {
+      // Another account holds the endpoint: our agent couldn't serve either.
+      return e.kind == 'agent_untrusted';
+    } catch (_) {
+      return false;
+    } finally {
+      await ipc.close();
+    }
   }
 
   /// Verified custom domains for [targetFqhn]; empty (ACME off) when billing

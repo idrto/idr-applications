@@ -1,19 +1,36 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:path/path.dart' as p;
 import 'package:two_key_dart_sdk/two_key_headless.dart';
 
 import 'package:idr_session/idr_session.dart';
 
+/// This machine's Target, shared by the Target GUI and `idrt`: agent files
+/// here, sign-in and identity in [targetStoreFile].
+/// `%APPDATA%/to.idr/idr_target` (`$HOME/to.idr/idr_target` elsewhere).
+Directory get defaultTargetDirectory {
+  final home = Platform.environment['APPDATA'] ??
+      Platform.environment['HOME'] ??
+      '.';
+  return Directory(p.join(home, 'to.idr', 'idr_target'));
+}
+
+/// The Target's sign-in session, bound org, identity and CA keys
+/// (DPAPI-encrypted on Windows, see [FileAuthStorage]).
+File get targetStoreFile =>
+    File(p.join(defaultTargetDirectory.path, 'secure', 'auth.json'));
+
 /// Namespaced JSON/secret persistence over the billing SDK [BillingAuthStorage].
 ///
-/// Writes are serialized — Windows DPAPI storage corrupts under concurrent
-/// read/write of the backing file.
+/// Writes are serialized within this process; [FileAuthStorage] also locks
+/// across processes, so the GUI and `idrt` can share the default store.
 class SessionStore {
   SessionStore({
     BillingAuthStorage? storage,
     this.prefix = 'idr.target.auth',
-  }) : storage = storage ?? SecureBillingAuthStorage(storagePrefix: prefix);
+  }) : storage = storage ?? FileAuthStorage(file: targetStoreFile);
 
   /// Shared with [BillingAuthClient] so cookies and Target secrets live together.
   final BillingAuthStorage storage;

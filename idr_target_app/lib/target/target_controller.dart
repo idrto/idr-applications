@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:idr_target/idr_target.dart';
+import 'package:path/path.dart' as p;
 
 import 'target_env.dart';
 
@@ -37,15 +39,21 @@ String describeError(Object e) {
 class TargetController extends ChangeNotifier {
   TargetController({IdrTarget? target, SessionStore? store})
     : store = store ?? SessionStore(),
+      _sharedStore = store == null,
       _injected = target {
     this.target =
         _injected ?? IdrTarget(config: buildConfig(), store: this.store);
   }
 
   final SessionStore store;
+
+  /// [store] is the machine's Target store, shared with `idrt`.
+  final bool _sharedStore;
   final IdrTarget? _injected;
   late final IdrTarget target;
   StreamSubscription<TargetState>? _sub;
+  StreamSubscription<FileSystemEvent>? _storeWatch;
+  Timer? _storeChanged;
 
   static const _orgKey = 'idrt.org';
   static const _providerKey = 'idrt.provider';
@@ -85,6 +93,7 @@ class TargetController extends ChangeNotifier {
     if (booted) return;
     _sub = target.stateStream.listen((_) => notifyListeners());
     try {
+      if (_sharedStore) _watchSharedStore();
       await target.start(launchAgent: false);
       await _loadLocal();
       if (session == null) await loadLoginOptions();
@@ -92,6 +101,33 @@ class TargetController extends ChangeNotifier {
       error = describeError(e);
     }
     booted = true;
+    notifyListeners();
+  }
+
+  /// `idrt login` / `logout` / `register` change the shared store under us:
+  /// reload when the account or registration there differs from ours.
+  void _watchSharedStore() {
+    final dir = targetStoreFile.parent..createSync(recursive: true);
+    _storeWatch = dir.watch().listen((e) {
+      if (p.basename(e.path) != p.basename(targetStoreFile.path)) return;
+      _storeChanged?.cancel();
+      _storeChanged = Timer(const Duration(milliseconds: 300), _reloadIfChanged);
+    });
+  }
+
+  Future<void> _reloadIfChanged() async {
+    // Our own writes happen inside run(); a running agent keeps what it started with.
+    if (busy || target.status == IdrTargetStatus.running) return;
+    final s = await store.loadSession();
+    final reg = await store.readJson('registration');
+    if (s?.email == session?.email && (reg != null) == (registration != null)) return;
+    try {
+      await target.start(launchAgent: false);
+      await _loadLocal();
+      if (session == null) await loadLoginOptions();
+    } catch (e) {
+      error = describeError(e);
+    }
     notifyListeners();
   }
 
@@ -145,6 +181,8 @@ class TargetController extends ChangeNotifier {
   @override
   void dispose() {
     unawaited(_sub?.cancel());
+    unawaited(_storeWatch?.cancel());
+    _storeChanged?.cancel();
     unawaited(target.dispose());
     super.dispose();
   }

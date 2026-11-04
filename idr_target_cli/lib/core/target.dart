@@ -28,12 +28,8 @@ Directory get cliDirectory {
   );
 }
 
-// ponytail: plain JSON file like the `idr` CLI; OS keychain if CLIs ship to end users.
-final cliStore = SessionStore(
-  storage: FileAuthStorage(
-    file: File(p.join(cliDirectory.path, 'secure', 'auth.json')),
-  ),
-);
+/// The Target store shared with the Target GUI ([targetStoreFile]).
+final cliStore = SessionStore();
 
 String get agentBinaryName =>
     Platform.isWindows ? 'target-agent.exe' : 'target-agent';
@@ -71,9 +67,8 @@ IdrTarget createTarget() {
       ),
       agentBinaryPath: resolveAgentBinary() ?? agentBinaryName,
       mode: _isDev ? IdrTargetMode.development : IdrTargetMode.production,
-      // Own agent dir: the GUI's default one would share its config, identity,
-      // entitlement JWT and pid file, and the two Targets would overwrite each other.
-      configDirectory: p.join(cliDirectory.path, 'agent'),
+      // Agent files in the SDK default dir, shared with the GUI: one Target per
+      // machine, and only one app runs its agent at a time.
     ),
     store: cliStore,
   );

@@ -128,8 +128,10 @@ Configuration and state (there is no config file; endpoints come from environmen
 | CLI | Where | What |
 |---|---|---|
 | `idr` | `%APPDATA%\idr\` (Windows), `~/.config/idr/` | `secure/auth.json` (session, device private key and certificate), `prefs.json` |
-| `idrt` | `%APPDATA%\to.idr\idrt\`, `~/.config/to.idr/idrt/` | `secure/auth.json` (session, bound org, CA private keys on admin machines) |
-| `idrt` | `%APPDATA%\to.idr\idr_target\` (`$HOME/to.idr/idr_target/` elsewhere) | agent config, certificate, agent database |
+| `idrt` and the Target GUI (shared) | `%APPDATA%\to.idr\idr_target\` (`$HOME/to.idr/idr_target/` elsewhere) | `secure/auth.json` (session, bound org, identity, CA private keys on admin machines), agent config, certificate, agent database |
+| `idrt` | `%APPDATA%\to.idr\idrt\`, `~/.config/to.idr/idrt/` | `orgs.json` (org picker history) |
+
+`auth.json` is encrypted with Windows DPAPI (readable only by your Windows account); on Linux / macOS it is plain JSON with mode 0600.
 
 ## Known limitations
 
