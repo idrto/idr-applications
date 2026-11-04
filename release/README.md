@@ -29,7 +29,10 @@ put every component in one folder and a shared dependency is installed once.
 | `source-cli` | windows-x64, linux-x64, macos-arm64 | none | `idr`, `idr_c_api`, `source-agent`, `config/prod.json` |
 | `target-agent` | all three | none | `target-agent` |
 
-There is no Source GUI yet; the website shows it as not available. Standalone
+macOS builds are opt-in: set the repository variable `BUILD_MACOS` to `true`
+(Settings → Secrets and variables → Actions → Variables) once the organization has
+macOS runner minutes. Without it the release has Windows and Linux only, and the
+website shows macOS as not available yet. There is no Source GUI yet; the website shows it as not available. Standalone
 downloads (`packages/<v>/standalone/`) are the same apps with the agent inside, for
 people who don't use Setup.
 

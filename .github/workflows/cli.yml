@@ -24,8 +24,9 @@ permissions:
 
 jobs:
   build:
-    name: ${{ matrix.cli }} ${{ matrix.plat }}
-    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.cli }} ${{ matrix.target.plat }}
+    runs-on: ${{ matrix.target.os }}
+    timeout-minutes: 45
     defaults:
       run:
         shell: bash
@@ -33,14 +34,11 @@ jobs:
       fail-fast: false
       matrix:
         cli: [idr, idrt]
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        include:
-          - os: ubuntu-latest
-            plat: linux-x64
-          - os: windows-latest
-            plat: windows-x64
-          - os: macos-latest
-            plat: macos-arm64
+        # macOS is opt-in (repository variable BUILD_MACOS=true): its runners need
+        # macOS Actions minutes, and a job that never gets a runner blocks publish.
+        target: ${{ fromJSON(vars.BUILD_MACOS == 'true'
+          && '[{"os":"ubuntu-latest","plat":"linux-x64"},{"os":"windows-latest","plat":"windows-x64"},{"os":"macos-latest","plat":"macos-arm64"}]'
+          || '[{"os":"ubuntu-latest","plat":"linux-x64"},{"os":"windows-latest","plat":"windows-x64"}]') }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -75,7 +73,7 @@ jobs:
       - name: Build ${{ matrix.cli }}
         env:
           CLI: ${{ matrix.cli }}
-          PLAT: ${{ matrix.plat }}
+          PLAT: ${{ matrix.target.plat }}
         run: |
           set -euo pipefail
           if [[ "${CLI}" == idr ]]; then
@@ -114,7 +112,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.cli }}-${{ matrix.plat }}
+          name: ${{ matrix.cli }}-${{ matrix.target.plat }}
           path: dist/
           if-no-files-found: error
           retention-days: 14
@@ -122,6 +120,7 @@ jobs:
   target-app:
     name: idr_target_app ${{ matrix.plat }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
     defaults:
       run:
         shell: bash
@@ -205,6 +204,7 @@ jobs:
   setup-windows:
     name: IDR Setup (Windows)
     runs-on: windows-latest
+    timeout-minutes: 20
     defaults:
       run:
         shell: bash
