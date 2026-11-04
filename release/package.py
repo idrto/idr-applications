@@ -29,8 +29,6 @@ import zipfile
 from pathlib import Path
 
 PLATFORMS = ['windows-x64', 'linux-x64', 'macos-arm64']
-# Built only when the repository variable BUILD_MACOS is true; skipped when absent.
-OPTIONAL_PLATFORMS = {'macos-arm64'}
 
 # id, display name, kind, CI artifact prefix, requires, platforms
 COMPONENTS = [
@@ -106,8 +104,6 @@ def build(a):
         for plat in plats:
             src = arts / f'{art}-{plat}'
             if not src.is_dir():
-                if plat in OPTIONAL_PLATFORMS:
-                    continue
                 raise SystemExit(f'missing artifact {src}')
             rels = files_of(src)
             if cid == 'target-agent':
@@ -143,9 +139,8 @@ def build(a):
         text = script.read_text().replace('IDR_CHANNEL:-staging', f'IDR_CHANNEL:-{channel}')
         (d / 'idr-setup.sh').write_bytes(text.replace('\r\n', '\n').encode())
         sh = entry(out, d / 'idr-setup.sh')
-        setup[channel] = {'windows-x64': entry(out, d / 'IDR-Setup.exe'), 'linux-x64': sh}
-        if any('macos-arm64' in c['files'] for c in components):
-            setup[channel]['macos-arm64'] = sh
+        setup[channel] = {'windows-x64': entry(out, d / 'IDR-Setup.exe'),
+                          'linux-x64': sh, 'macos-arm64': sh}
 
     manifest = {
         'schema': 1, 'channel': a.channel, 'version': a.version, 'commit': a.commit,

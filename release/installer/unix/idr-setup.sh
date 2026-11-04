@@ -125,7 +125,6 @@ field() { # <id> <column 4..9> for this platform
   awk -F '\t' -v id="$1" -v p="$PLATFORM" -v c="$2" '$1=="pkg" && $2==id && $3==p {print $c; exit}' "$TMP/manifest.tsv"
 }
 apps="$(awk -F '\t' -v p="$PLATFORM" '$1=="pkg" && $3==p && $8=="app" {print $2}' "$TMP/manifest.tsv")"
-[ -n "$apps" ] || die "IDR $VERSION has no build for $PLATFORM. Nothing was changed."
 
 # --- Choose components ---------------------------------------------------------
 
