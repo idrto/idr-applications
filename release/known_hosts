@@ -1,0 +1,8 @@
+# Host keys of the release VM (SERVER_1_HOST), pinned via HostKeyAlias=idr-vm.
+# Scanned 2026-11-04 from 13.140.201.123. Re-scan and review if the VM is rebuilt.
+# 13.140.201.123:22 SSH-2.0-OpenSSH_9.6p1 Ubuntu-3ubuntu13.20
+idr-vm ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCtxVL/S81AfV0J94Rh36PlTxGDuwN9k64TYv7jerEq+zohIkzcRsIDrfKWBYgWbKO64OLuFfkbYyHeGZJIvkVZE9A8LtgKSZcBEnJmwoHmlJX5yt2uZBO7ohsqPZGF4XSbn20RtfNdHkgI++ZMBrpQo+bNOYW6QgMIFhY63uNlzMZR27YZ80LIucW/ZjJ9mIIDKfIh7xMOPhOcuiGmNK4hcLycDCFyhN1OHKFmGePAKATrJVwhobXygrkOk3QEHxxQyWqDhfILfmMjZ4bp/H/ucv0mZioI8n/Ef2ejScNZvBzfA2S7CuY22FUs0z8IFTSo/nO1nN/skHLtYFPkpacUgOFFkZ/HLlhRiJCwmoYU375HHDKQY/LbT/AZQGBGLENV7Di2EIMVbAwHfe7rTaJzAlNaUCBCcqauGN2IRi25u19XmswWdjDo4gaTuNoylvZE1RhxtIVqbCH2YmQ9xD+/LqtjmZKwOv4ScT+0D5/9mHYiskALd5dL0E+iAyIY5fc=
+# 13.140.201.123:22 SSH-2.0-OpenSSH_9.6p1 Ubuntu-3ubuntu13.20
+idr-vm ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBLZ2wtrcV3koZTcyDXT1hJtyn4zp5sW7gIzHRUXerbKnAcAuqHj/Cc8IrilNaaennpX3s+AS1ngwb/pojxxRR+4=
+# 13.140.201.123:22 SSH-2.0-OpenSSH_9.6p1 Ubuntu-3ubuntu13.20
+idr-vm ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEql6G1mzBYry3tIsh0HpaovRzQ2OZBLf0RL9eSHNg6l

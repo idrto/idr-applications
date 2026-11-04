@@ -1,0 +1,64 @@
+# Promote a published staging version to stable: same bytes, re-signed manifest.
+# Staging never becomes stable on its own.
+name: Promote to stable
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Staging version to promote (e.g. 0.2.0-57; see /staging/manifest.json)
+        required: true
+
+concurrency:
+  group: publish-downloads
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: applications/apps
+
+      - name: Promote
+        env:
+          SSHPASS: ${{ secrets.SERVER_1_PASSWORD }}
+          HOST: ${{ secrets.SERVER_1_HOST }}
+          VM_USER: ${{ secrets.SERVER_1_USER }}
+          SIGNING_KEY: ${{ secrets.IDR_RELEASE_SIGNING_KEY }}
+        run: |
+          set -euo pipefail
+          [[ "${VERSION}" =~ ^[0-9A-Za-z.+-]+$ ]] || { echo "::error::bad version"; exit 1; }
+          [[ -n "${SIGNING_KEY}" ]] || { echo "::error::Secret IDR_RELEASE_SIGNING_KEY is not set."; exit 1; }
+          sudo apt-get install -y -qq sshpass >/dev/null
+          opts=(-o HostKeyAlias=idr-vm -o "UserKnownHostsFile=${PWD}/applications/apps/release/known_hosts"
+                -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=password
+                -o ConnectTimeout=20)
+          rel=applications/apps/release
+          mkdir out
+          # The staging manifest of that version, checked against our key before reuse.
+          sshpass -e scp -q "${opts[@]}" "${VM_USER}@${HOST}:/opt/idr-downloads/staging/packages/${VERSION}/manifest.json" \
+            "${VM_USER}@${HOST}:/opt/idr-downloads/staging/packages/${VERSION}/manifest.json.sig" out/
+          openssl dgst -sha256 -verify "$rel/release-key.pem" -signature out/manifest.json.sig out/manifest.json
+          python3 "$rel/package.py" promote --manifest-dir out --channel stable
+          key="$(mktemp)"; trap 'rm -f "$key"' EXIT
+          printf '%s\n' "${SIGNING_KEY}" > "$key"
+          for f in manifest.json manifest.tsv; do
+            openssl dgst -sha256 -sign "$key" -out "out/$f.sig" "out/$f"
+          done
+          cp "$rel/release-key.pem" out/
+          tar -C out -czf bundle.tgz release-key.pem manifest.json manifest.json.sig manifest.tsv manifest.tsv.sig
+          in=/opt/idr-downloads/.incoming; id="promote-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          sshpass -e scp -q "${opts[@]}" bundle.tgz "${VM_USER}@${HOST}:${in}/${id}.tgz"
+          sshpass -e scp -q "${opts[@]}" "$rel/vm-publish.sh" "${VM_USER}@${HOST}:${in}/${id}.sh"
+          sshpass -e ssh "${opts[@]}" "${VM_USER}@${HOST}" \
+            "bash ${in}/${id}.sh promote ${VERSION} ${in}/${id}.tgz </dev/null; rc=\$?; rm -f ${in}/${id}.tgz ${in}/${id}.sh; exit \$rc"
+
+      - name: Verify public URLs
+        run: bash applications/apps/release/verify-public.sh https://billing.idr.to stable out

@@ -16,7 +16,8 @@ on:
 
 concurrency:
   group: cli-${{ github.ref }}
-  cancel-in-progress: true
+  # main publishes to the VM: queue those runs instead of killing one mid-upload.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
   contents: read
@@ -98,9 +99,11 @@ jobs:
           cp -v applications/apps/config/prod.json dist/config/
 
           if [[ "${CLI}" == idr ]]; then
+            # Runtime pieces only (not the import .lib / header): idr_c_api for
+            # WebRTC, source-agent for `idr transfer`. Both are found next to idr.
             src="agent-dist/source/${PLAT}"
             shopt -s nullglob
-            cp -v "${src}"/*idr_c_api* dist/ || true
+            cp -v "${src}"/*idr_c_api.{dll,so,dylib} "${src}"/source-agent* dist/
             shopt -u nullglob
           else
             tgt="agent-dist/target/${PLAT}"
@@ -196,3 +199,122 @@ jobs:
           path: applications/apps/idr_target_app/build/windows/x64/runner/Release/
           if-no-files-found: error
           retention-days: 14
+
+  # IDR-Setup.exe: the Windows bootstrapper (component picker + downloader).
+  # One build per channel because the channel is baked in.
+  setup-windows:
+    name: IDR Setup (Windows)
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: applications/apps
+      - name: Build IDR-Setup.exe
+        working-directory: applications/apps/release/installer/windows
+        run: |
+          set -euo pipefail
+          iscc="/c/Program Files (x86)/Inno Setup 6/ISCC.exe"
+          [[ -x "$iscc" ]] || choco install innosetup -y --no-progress
+          version="$(tr -d '\r\n' < ../../../VERSION)-${GITHUB_RUN_NUMBER}"
+          for channel in staging stable; do
+            MSYS_NO_PATHCONV=1 "$iscc" /Q "/DChannel=${channel}" "/DAppVersion=${version}" idr-setup.iss
+          done
+          ls -la Output
+      - uses: actions/upload-artifact@v4
+        with:
+          name: idr-setup-windows
+          path: applications/apps/release/installer/windows/Output/
+          if-no-files-found: error
+          retention-days: 14
+
+  # main → GitHub prerelease + versioned packages, setup installers and the signed
+  # manifest on the VM. The download website (Auth_repo/download-site) deploys on its
+  # own and reads that manifest. Stable only via the Promote workflow. See release/README.md.
+  publish:
+    name: Publish to staging
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: [build, target-app, setup-windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # GitHub release
+    concurrency:
+      group: publish-downloads
+      cancel-in-progress: false
+    env:
+      PUBLIC: https://billing.idr.to
+      CHANNEL: staging
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: applications/apps
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Package
+        run: |
+          set -euo pipefail
+          version="$(tr -d '\r\n' < applications/apps/VERSION)-${GITHUB_RUN_NUMBER}"
+          echo "VERSION=${version}" >> "$GITHUB_ENV"
+          python3 applications/apps/release/package.py build --artifacts artifacts \
+            --version "${version}" --channel "${CHANNEL}" --commit "${GITHUB_SHA}" --out out
+          cp applications/apps/release/release-key.pem out/
+
+      - name: Sign manifest
+        env:
+          SIGNING_KEY: ${{ secrets.IDR_RELEASE_SIGNING_KEY }}
+        run: |
+          set -euo pipefail
+          [[ -n "${SIGNING_KEY}" ]] || { echo "::error::Secret IDR_RELEASE_SIGNING_KEY is not set (see release/README.md)."; exit 1; }
+          key="$(mktemp)"; trap 'rm -f "$key"' EXIT
+          printf '%s\n' "${SIGNING_KEY}" > "$key"
+          for f in manifest.json manifest.tsv; do
+            openssl dgst -sha256 -sign "$key" -out "out/$f.sig" "out/$f"
+            openssl dgst -sha256 -verify out/release-key.pem -signature "out/$f.sig" "out/$f"
+          done
+          tar -C out -czf bundle.tgz packages release-key.pem manifest.json manifest.json.sig manifest.tsv manifest.tsv.sig
+          ls -la bundle.tgz
+
+      # Same files as on the VM, as a GitHub prerelease (asset names must be unique).
+      - name: GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          p="out/packages/${VERSION}"; tag="staging-${VERSION}"
+          files=("$p"/*.zip "$p"/*.tar.gz "$p"/standalone/* "$p/setup/staging/IDR-Setup.exe" "$p/setup/staging/idr-setup.sh"
+                 "$p/SHA256SUMS" out/manifest.json out/manifest.json.sig)
+          if gh release view "$tag" >/dev/null 2>&1; then   # re-run of the same run number
+            gh release upload "$tag" --clobber "${files[@]}"
+          else
+            gh release create "$tag" --prerelease --target "${GITHUB_SHA}" --title "Staging ${VERSION}" \
+              --notes "Staging build of ${GITHUB_SHA}. Download page: ${PUBLIC}/staging/download/" "${files[@]}"
+          fi
+
+      - name: Upload to VM
+        env:
+          SSHPASS: ${{ secrets.SERVER_1_PASSWORD }}
+          HOST: ${{ secrets.SERVER_1_HOST }}
+          VM_USER: ${{ secrets.SERVER_1_USER }}
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y -qq sshpass >/dev/null
+          # Host key pinned in the repo; never trust-on-first-use. Password via $SSHPASS (not argv).
+          opts=(-o HostKeyAlias=idr-vm -o "UserKnownHostsFile=${PWD}/applications/apps/release/known_hosts"
+                -o StrictHostKeyChecking=yes -o PubkeyAuthentication=no -o PreferredAuthentications=password
+                -o ConnectTimeout=20 -o ServerAliveInterval=15)
+          in="/opt/idr-downloads/.incoming"
+          id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          sshpass -e ssh "${opts[@]}" "${VM_USER}@${HOST}" "mkdir -p ${in}"
+          sshpass -e scp -q "${opts[@]}" bundle.tgz "${VM_USER}@${HOST}:${in}/${id}.tgz"
+          sshpass -e scp -q "${opts[@]}" applications/apps/release/vm-publish.sh "${VM_USER}@${HOST}:${in}/${id}.sh"
+          sshpass -e ssh "${opts[@]}" "${VM_USER}@${HOST}" \
+            "bash ${in}/${id}.sh publish ${CHANNEL} ${VERSION} ${in}/${id}.tgz </dev/null; rc=\$?; rm -f ${in}/${id}.tgz ${in}/${id}.sh; exit \$rc"
+
+      - name: Verify public URLs
+        run: bash applications/apps/release/verify-public.sh "${PUBLIC}" "${CHANNEL}" out

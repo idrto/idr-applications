@@ -98,6 +98,8 @@ flutter run -d windows -a --flavor=dev
 
 ## Build and distribute
 
+Users download the apps and the IDR Setup installers from https://billing.idr.to/staging/download/; CI publishes every `main` build there (packaging, installers and VM upload: [release/README.md](release/README.md); the website itself lives in `Auth_repo/download-site`). The steps below are for building by hand.
+
 `dart compile exe` **does not work** for these CLIs: a transitive dependency (`objective_c`, via `path_provider`) has a build hook, and `dart compile` refuses packages with build hooks. Use `dart build cli` instead. It produces the same kind of self-contained executable; the Dart SDK isn't needed to run it.
 
 Dart doesn't cross-compile here, so build on each target OS (Windows x64, macOS, Linux). Only the Windows build has been verified so far.
