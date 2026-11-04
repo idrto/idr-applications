@@ -84,7 +84,9 @@ publish)
   publish_manifests "$ROOT/$channel" "$v"
 
   if [[ "$channel" == staging ]]; then
-    ls -1dt "$ROOT"/staging/packages/*/ | tail -n +$((KEEP_STAGING + 1)) | grep -v "/$v/\$" | xargs -r rm -rf
+    # `|| true` on grep: with nothing to prune it gets no input, exits 1, and
+    # pipefail would end the script with status 1 after a successful publish.
+    ls -1dt "$ROOT"/staging/packages/*/ | tail -n +$((KEEP_STAGING + 1)) | { grep -v "/$v/\$" || true; } | xargs -r rm -rf
   fi
   echo "published $channel $v"
   ;;
