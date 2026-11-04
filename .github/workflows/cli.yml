@@ -16,10 +16,8 @@ on:
 
 concurrency:
   group: cli-${{ github.ref }}
-  # A newer push cancels the older run, on main too. Queueing instead let a run whose
-  # jobs never got a runner block every later run for up to 24 h. Cancelling a publish
-  # is safe: vm-publish.sh swaps the manifest last, so the previous release stays live.
-  cancel-in-progress: true
+  # main publishes to the VM: queue those runs instead of killing one mid-upload.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
   contents: read
