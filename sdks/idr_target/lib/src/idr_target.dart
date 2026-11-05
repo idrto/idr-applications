@@ -492,12 +492,18 @@ class IdrTarget {
     try {
       _crypto = IdrDpCrypto.open();
       return _crypto!;
-    } catch (_) {
+    } catch (e) {
       _setAttention(const IdrTargetAttention(
         code: IdrTargetErrorCode.cryptoUnavailable,
         message: IdrTargetMessages.cryptoUnavailable,
       ));
-      throw StateError(IdrTargetMessages.cryptoUnavailable);
+      // Typed, so callers (e.g. registerHost) report this message instead of a
+      // generic "something went wrong".
+      throw IdrTargetException(
+        code: IdrTargetErrorCode.cryptoUnavailable,
+        message: IdrTargetMessages.cryptoUnavailable,
+        cause: e,
+      );
     }
   }
 

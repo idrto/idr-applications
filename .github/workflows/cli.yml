@@ -99,17 +99,21 @@ jobs:
           cp -v applications/apps/config/prod.json dist/config/
 
           if [[ "${CLI}" == idr ]]; then
-            # Runtime pieces only (not the import .lib / header): idr_c_api for
-            # WebRTC, source-agent for `idr transfer`. Both are found next to idr.
+            # Everything the agent repo ships for Source except build-time files
+            # (import .lib, header): idr_c_api (WebRTC), source-agent (`idr transfer`),
+            # idr_dp (enroll certificates) and, on Windows, the OpenSSL + VC++ DLLs.
             src="agent-dist/source/${PLAT}"
-            shopt -s nullglob
-            cp -v "${src}"/*idr_c_api.{dll,so,dylib} "${src}"/source-agent* dist/
-            shopt -u nullglob
+            for f in "${src}"/*; do
+              case "$f" in *.lib|*.h) ;; *) cp -v "$f" dist/ ;; esac
+            done
           else
+            # target-agent plus idr_dp (registration certificates) and, on Windows,
+            # the OpenSSL + VC++ DLLs the agent repo ships beside it.
             tgt="agent-dist/target/${PLAT}"
-            cp -v "${tgt}"/target-agent* dist/
+            cp -v "${tgt}"/* dist/
             chmod +x dist/target-agent 2>/dev/null || true
           fi
+          ls dist/*idr_dp* >/dev/null || { echo "::error::idr_dp missing from e2e-agent-binaries.zip (agent repo e2e binaries workflow)"; exit 1; }
           ls -la dist
 
       - uses: actions/upload-artifact@v4
@@ -188,10 +192,9 @@ jobs:
           # Production build: only config/prod.json ships (the default flavor of a release exe).
           mkdir -p "${rel}/config"
           cp -v applications/apps/config/prod.json "${rel}/config/"
-          find agent-dist -iname 'idr_dp*.dll' -exec cp -v {} "${rel}/" \;
           test -f "${rel}/target-agent.exe"
-          # e2e-agent-binaries.zip has no idr_dp.dll yet; the app shows it in Diagnostics.
-          ls "${rel}"/idr_dp*.dll || echo "warning: idr_dp.dll not published by the agent repo"
+          # idr_dp + OpenSSL/VC++ DLLs come with target/windows-x64 from the agent repo.
+          test -f "${rel}/idr_dp.dll" || { echo "::error::idr_dp.dll missing from e2e-agent-binaries.zip"; exit 1; }
 
       - uses: actions/upload-artifact@v4
         if: runner.os == 'Windows'

@@ -32,7 +32,11 @@ put every component in one folder and a shared dependency is installed once.
 macOS builds are opt-in: set the repository variable `BUILD_MACOS` to `true`
 (Settings → Secrets and variables → Actions → Variables) once the organization has
 macOS runner minutes. Without it the release has Windows and Linux only, and the
-website shows macOS as not available yet. There is no Source GUI yet; the website shows it as not available. Standalone
+website shows macOS as not available yet. Every app package also carries what the agent repo's `e2e binaries` workflow
+ships beside the agents in `e2e-agent-binaries.zip`: `idr_dp` (machine keys and
+certificates, needed by `idrt` registration and `idr enroll`) and, on Windows, the
+OpenSSL DLLs the agents were linked against plus the Visual C++ runtime.
+There is no Source GUI yet; the website shows it as not available. Standalone
 downloads (`packages/<v>/standalone/`) are the same apps with the agent inside, for
 people who don't use Setup.
 

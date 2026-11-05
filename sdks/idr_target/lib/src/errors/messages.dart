@@ -90,7 +90,8 @@ abstract final class IdrTargetErrorMessages {
       'Auth has sign-in methods configured, but this app build cannot use them yet. '
       'Ask your admin to enable Google SSO, or update the app.';
   static const cryptoUnavailable =
-      'Desktop crypto unavailable. Build idr-dp-ffi (idr_dp native lib) or inject IdrCrypto.';
+      'The certificate library (idr_dp) is missing from this installation. '
+      'Reinstall IDR, or put idr_dp next to the app or set IDR_DP_LIB.';
   static const tlsKeyMissing =
       'TLS private key is missing. Re-issue certificates for this host.';
   static const certIssueFailed =
