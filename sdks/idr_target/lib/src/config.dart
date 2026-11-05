@@ -96,11 +96,13 @@ class IdrTargetConfig {
         apiBaseUrl = controlPlaneUrl ?? apiBaseUrl ?? billingBaseUrl!,
         billingBaseUrl = billingBaseUrl ?? controlPlaneUrl ?? apiBaseUrl!,
         discoveryUrl = _resolveDiscoveryUrl(mode, discoveryUrl),
-        // Public verifying key (not a secret). Required so target-agent can boot
-        // against live slim discovery (public.idr.to) which omits per-server keys.
-        // Local mock Presence still works: insecure_dev skips a failed verify.
+        // Public verifying key (not a secret) of public.idr.to's discovery
+        // document: idrto/public discovery/discovery-public-key.txt, signed in
+        // that repo's Pages workflow. Production target-agent refuses discovery
+        // signed by any other key. Local mock Presence still works: insecure_dev
+        // skips a failed verify.
         discoveryKey =
-            discoveryKey ?? 'lQuEz1V7pbbyCT-li64zM0Wee6dC42L3zKaeJ8UKg6w',
+            discoveryKey ?? 'ri-IXqT0A69yuxaS6wppxnX8gUsdDC_Nl6aUtglQUK8',
         agentRegion = agentRegion ??
             (mode == IdrTargetMode.development ? 'local' : 'eu-central'),
         insecureDev = insecureDev ?? (mode == IdrTargetMode.development);
