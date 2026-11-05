@@ -27,6 +27,8 @@ ArchitecturesAllowed=x64
 ArchitecturesInstallIn64BitMode=x64
 ChangesEnvironment=yes
 WizardStyle=modern
+; Same icon as the Target app (Auth_repo/download-site/favicon.svg).
+SetupIconFile=..\..\..\idr_target_app\windows\runner\resources\app_icon.ico
 Compression=lzma2
 SolidCompression=yes
 OutputDir=Output
@@ -44,22 +46,25 @@ Name: "target_cli"; Description: "IDR Target CLI (idrt): the same from a termina
 Name: "source_cli"; Description: "IDR Source CLI (idr): use services and send files to your Targets"; Types: custom
 
 [Tasks]
-Name: "desktopicon"; Description: "Create a desktop shortcut for IDR Target"; Components: target_gui
+Name: "desktopicon"; Description: "Create a desktop shortcut for idrt"; Components: target_gui
 
 [Files]
 ; Kept for the uninstaller (removes the PATH entry).
 Source: "idr-install.ps1"; DestDir: "{app}\.idr"; Flags: ignoreversion
 
 [InstallDelete]
-Type: files; Name: "{autoprograms}\IDR Target.lnk"; Components: not target_gui
-Type: files; Name: "{autodesktop}\IDR Target.lnk"; Components: not target_gui
+; Older versions named the shortcuts "IDR Target"; always remove those.
+Type: files; Name: "{autoprograms}\IDR Target.lnk"
+Type: files; Name: "{autodesktop}\IDR Target.lnk"
+Type: files; Name: "{autoprograms}\idrt.lnk"; Components: not target_gui
+Type: files; Name: "{autodesktop}\idrt.lnk"; Components: not target_gui
 
 [Icons]
-Name: "{autoprograms}\IDR Target"; Filename: "{app}\idr_target_app.exe"; Components: target_gui
-Name: "{autodesktop}\IDR Target"; Filename: "{app}\idr_target_app.exe"; Components: target_gui; Tasks: desktopicon
+Name: "{autoprograms}\idrt"; Filename: "{app}\idr_target_app.exe"; Components: target_gui
+Name: "{autodesktop}\idrt"; Filename: "{app}\idr_target_app.exe"; Components: target_gui; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\idr_target_app.exe"; Description: "Open IDR Target"; Flags: nowait postinstall skipifsilent; Components: target_gui
+Filename: "{app}\idr_target_app.exe"; Description: "Open idrt"; Flags: nowait postinstall skipifsilent; Components: target_gui
 
 [UninstallRun]
 Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\.idr\idr-install.ps1"" -Mode Uninstall -InstallDir ""{app}"""; Flags: runhidden; RunOnceId: "IdrUninstall"

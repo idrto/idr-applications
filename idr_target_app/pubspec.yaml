@@ -52,6 +52,30 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  # App icon from Auth_repo/download-site/favicon.svg (rendered to assets/icon/*.png).
+  # Regenerate with: dart run flutter_launcher_icons
+  flutter_launcher_icons: ^0.14.4
+
+flutter_launcher_icons:
+  image_path: "assets/icon/app_icon.png"
+  # Android and iOS mask the corners themselves, so they get the full-bleed square.
+  android: true
+  image_path_android: "assets/icon/app_icon_full.png"
+  ios: true
+  image_path_ios: "assets/icon/app_icon_full.png"
+  remove_alpha_ios: true
+  web:
+    generate: true
+    background_color: "#0b9c9a"
+    theme_color: "#0b9c9a"
+  # Note: this writes a 256px-only app_icon.ico. The committed one also has
+  # 16-128px sizes (sharper in the taskbar); rebuild it the same way after
+  # regenerating (Pillow: Image.save(..., sizes=[16,20,24,32,40,48,64,128,256])).
+  windows:
+    generate: true
+    icon_size: 256
+  macos:
+    generate: true
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
