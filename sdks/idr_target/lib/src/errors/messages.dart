@@ -81,8 +81,7 @@ abstract final class IdrTargetErrorMessages {
   static const agentAlreadyRunning =
       'This Target is already running (started from the Target app or `idrt start`). '
       'Stop it there first.';
-  static const noLoginProviders =
-      'No sign-in methods are configured on Auth. '
+  static const noLoginProviders = 'No sign-in methods are configured on Auth. '
       'Add SSO credentials on the server and try again.';
   static const loginOptionsInvalid =
       'Auth returned an invalid login-options response. Try again in a moment.';
@@ -98,10 +97,9 @@ abstract final class IdrTargetErrorMessages {
       'Could not issue TLS certificates. Check Auth and try again.';
   static const terminatorReloadFailed =
       'TLS terminator reload failed. Check local TLS configuration.';
-  static const notImplemented =
-      'This capability is not implemented yet.';
-  static const unavailable =
-      'This capability is currently unavailable.';
+  static const notImplemented = 'This capability is not implemented yet.';
+
+  static const unavailable = 'This capability is currently unavailable.';
 
   // Backward-compatible aliases for older call sites.
   static const signInRequired = authRequired;
