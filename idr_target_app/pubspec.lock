@@ -21,9 +21,9 @@ packages:
     dependency: transitive
     description:
       path: "packages/clients/dart"
-      ref: "1ca42c4e9894c500fa0fdc5c86a249765775099e"
-      resolved-ref: "1ca42c4e9894c500fa0fdc5c86a249765775099e"
-      url: "https://github.com/2keyapp/better-auth.git"
+      ref: "54544a330ac3cebfe03b3078ee342204325900ba"
+      resolved-ref: "54544a330ac3cebfe03b3078ee342204325900ba"
+      url: "https://github.com/dev10m-adv/better-auth.git"
     source: git
     version: "0.1.0"
   boolean_selector:

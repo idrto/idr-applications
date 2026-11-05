@@ -5,7 +5,7 @@
 # Layout matches local monorepo paths (pubspec path: ../../../../…):
 #   applications/apps/     this repo
 #   agents_engine/agent/   idrto/agent@e2e
-#   Auth_repo/2key-billing-sdks/
+#   Auth_repo/2key-billing-sdks/   dev10m-adv/2key-billing-sdks@feat/idr-target-headless-sdk
 
 name: CLI
 
@@ -54,7 +54,7 @@ jobs:
 
       - uses: actions/checkout@v4
         with:
-          repository: 2keyapp/2key-billing-sdks
+          repository: dev10m-adv/2key-billing-sdks
           ref: feat/idr-target-headless-sdk
           path: Auth_repo/2key-billing-sdks
 
@@ -147,7 +147,7 @@ jobs:
 
       - uses: actions/checkout@v4
         with:
-          repository: 2keyapp/2key-billing-sdks
+          repository: dev10m-adv/2key-billing-sdks
           ref: feat/idr-target-headless-sdk
           path: Auth_repo/2key-billing-sdks
 

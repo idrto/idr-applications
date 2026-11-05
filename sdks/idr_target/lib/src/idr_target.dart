@@ -71,6 +71,7 @@ class IdrTarget {
           storage: _store.storage,
           sessionLauncher: launcher.call,
           httpClient: httpClient,
+          nativeSignIn: true, // GET /api/auth/native/sign-in/social, no proxy link
         );
     _authClient.setOnline(false);
     _auth = AuthManager(client: _authClient, store: _store, launcher: launcher);
