@@ -9,7 +9,7 @@ IDR component installer (Windows). Run by IDR-Setup.exe; also usable on its own:
 Every component goes into one folder (default %LOCALAPPDATA%\Programs\IDR): the
 apps find target-agent, source-agent and idr_c_api next to their own exe, so
 the shared target-agent is installed once. Signed-in state, keys and device
-identities live in %APPDATA% (to.idr, idr) and are never touched here.
+identities live in %APPDATA% (idr.to-t, idr.to-s) and are never touched here.
 #>
 param(
   [ValidateSet('Install', 'Resolve', 'Apply', 'Uninstall')] [string]$Mode = 'Install',

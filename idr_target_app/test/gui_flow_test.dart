@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:idr_target/idr_target.dart';
@@ -88,7 +87,6 @@ Future<void> _pumpApp(WidgetTester tester, TargetController c) async {
 }
 
 void main() {
-  setUpAll(() => GoogleFonts.config.allowRuntimeFetching = false);
 
   testWidgets('sign-in offers only what the SDK can run (Google)', (t) async {
     final c = (await t.runAsync(

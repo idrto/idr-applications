@@ -67,7 +67,7 @@ Services that must be running (dev):
 
 ## Configuration
 
-`--flavor dev|staging|prod` (default: prod for a release build, dev under `dart run`; see Flavors in `../README.md`) sets the endpoints and the state folder (`to.idr`, `to.idr-dev`, …). Environment variables override it:
+`--flavor dev|staging|prod` (default: prod for a release build, dev under `dart run`; see Flavors in `../README.md`) sets the endpoints and the state folder (`idr.to-t`, `idr.to-t-dev`, …). Environment variables override it:
 
 | Variable | Default (dev flavor) | Purpose |
 |---|---|---|
@@ -83,12 +83,12 @@ Files:
 
 | Path | Contents |
 |---|---|
-| `%APPDATA%/to.idr/idr_target/secure/auth.json` | Sign-in session, bound org, mode, **root and zone CA private keys** on an admin machine. Encrypted with DPAPI on Windows; plain JSON (mode 0600) elsewhere: protect it like a key. |
-| `%APPDATA%/to.idr/idr_target/target.local.toml` | Agent config, rewritten on every `idrt start` |
-| `%APPDATA%/to.idr/idr_target/identity.dp.json` | This Target's approved certificate |
-| `%APPDATA%/to.idr/idr_target/entitlement.jwt` | Short-lived subscription token for Presence. Renewed every few minutes while running; the agent picks up the new one without restarting. |
-| `%APPDATA%/to.idr/idr_target/transfers/` | File-transfer state and history |
-| `%APPDATA%/to.idr/idrt/orgs.json` | Organizations this machine bound before (org picker) |
+| `%APPDATA%/idr.to-t/idr_target/secure/auth.json` | Sign-in session, bound org, mode, **root and zone CA private keys** on an admin machine. Encrypted with DPAPI on Windows; plain JSON (mode 0600) elsewhere: protect it like a key. |
+| `%APPDATA%/idr.to-t/idr_target/target.local.toml` | Agent config, rewritten on every `idrt start` |
+| `%APPDATA%/idr.to-t/idr_target/identity.dp.json` | This Target's approved certificate |
+| `%APPDATA%/idr.to-t/idr_target/entitlement.jwt` | Short-lived subscription token for Presence. Renewed every few minutes while running; the agent picks up the new one without restarting. |
+| `%APPDATA%/idr.to-t/idr_target/transfers/` | File-transfer state and history |
+| `%APPDATA%/idr.to-t/idrt/orgs.json` | Organizations this machine bound before (org picker) |
 
 `idrt` and the Target GUI share this one Target: sign in, register or bind an org in either and the other sees it. Only one of them runs the agent at a time; starting a second one fails with `AGENT_ALREADY_RUNNING`.
 
@@ -355,7 +355,7 @@ What happens afterwards:
 - **Re-checks:** billing re-checks verified domains every 6 hours. If the CNAME is gone on two checks in a row, the domain becomes `failed` and stops routing to this Target.
 - **Development:** the dev flavor (`idrt --flavor dev`) uses Let's Encrypt's staging server; its certificates aren't trusted by browsers.
 - **Remove:** `idrt provider domain remove app.customer.com` stops routing within 5 minutes (Presence's cache); restart `idrt start` to drop the certificate request.
-- **Status file:** certificates and each domain's `acme-status.json` live in `%APPDATA%/to.idr/idr_target/acme/certs/<domain>/` (shared with the Target GUI).
+- **Status file:** certificates and each domain's `acme-status.json` live in `%APPDATA%/idr.to-t/idr_target/acme/certs/<domain>/` (shared with the Target GUI).
 - **HTTPS still needs nginx:** serving HTTPS on the custom domain needs an nginx on this machine that uses that certificate. Issuance doesn't.
 
 ## File transfer

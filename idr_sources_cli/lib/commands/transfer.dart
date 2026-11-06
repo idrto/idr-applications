@@ -55,8 +55,8 @@ String sourceAgentExecutable() {
   return 'source-agent';
 }
 
-/// The agent's config: `IDR_SOURCE_CONFIG`, else `%APPDATA%/idr/source.toml`
-/// (`~/.config/idr/source.toml`; per flavor) when it exists.
+/// The agent's config: `IDR_SOURCE_CONFIG`, else `%APPDATA%/idr.to-s/source.toml`
+/// (`~/.config/idr.to-s/source.toml`; per flavor) when it exists.
 String? sourceAgentConfig() {
   final env = Platform.environment['IDR_SOURCE_CONFIG']?.trim();
   if (env != null && env.isNotEmpty) return env;
@@ -83,7 +83,7 @@ Future<Object?> agentTransfer(List<String> args, {String? executable}) async {
   }
   if (config == null && err.contains('load ') && err.contains('source.example.toml')) {
     throw const CliError(CliExit.config, 'No Source agent config found.',
-        hint: 'Create %APPDATA%/idr/source.toml (see the README, File transfer), or set IDR_SOURCE_CONFIG.',
+        hint: 'Create %APPDATA%/idr.to-s/source.toml (see the README, File transfer), or set IDR_SOURCE_CONFIG.',
         code: 'AGENT_CONFIG_MISSING');
   }
   final Map<String, dynamic> resp;

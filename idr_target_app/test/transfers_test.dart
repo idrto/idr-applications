@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:idr_target/idr_target.dart';
 import 'package:idr_target_app/screens/home/transfers_section.dart';
 import 'package:idr_target_app/target/native_dialogs.dart';
@@ -51,7 +50,6 @@ Future<void> _pump(WidgetTester t, TargetTransfers transfers) async {
 }
 
 void main() {
-  setUpAll(() => GoogleFonts.config.allowRuntimeFetching = false);
 
   testWidgets('a pending single-file offer: name, size, sender, relayed; Accept / Accept to… / Reject', (t) async {
     final fake = _FakeTransfers();

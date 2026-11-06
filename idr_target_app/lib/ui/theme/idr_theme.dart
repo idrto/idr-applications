@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
-/// Tokens from the IDR design system (Instrument Sans, Inter, JetBrains Mono).
+/// Tokens from the IDR design system (Instrument Sans, Inter, JetBrains Mono;
+/// bundled in assets/fonts, so nothing is downloaded at runtime).
 abstract final class IdrColors {
   static const bg = Color(0xFFF7F7F8);
   static const surface = Color(0xFFFFFFFF);
@@ -76,7 +76,8 @@ abstract final class IdrText {
     FontWeight weight = FontWeight.w600,
     Color color = IdrColors.text,
     double height = 1.2,
-  }) => GoogleFonts.instrumentSans(
+  }) => TextStyle(
+    fontFamily: 'Instrument Sans',
     fontSize: size,
     fontWeight: weight,
     color: color,
@@ -89,7 +90,8 @@ abstract final class IdrText {
     Color color = IdrColors.zinc800,
     double? height,
     double? letterSpacing,
-  }) => GoogleFonts.inter(
+  }) => TextStyle(
+    fontFamily: 'Inter',
     fontSize: size,
     fontWeight: weight,
     color: color,
@@ -101,7 +103,8 @@ abstract final class IdrText {
     double size = 12,
     FontWeight weight = FontWeight.w400,
     Color color = IdrColors.zinc700,
-  }) => GoogleFonts.jetBrainsMono(
+  }) => TextStyle(
+    fontFamily: 'JetBrains Mono',
     fontSize: size,
     fontWeight: weight,
     color: color,
@@ -111,7 +114,8 @@ abstract final class IdrText {
 enum IdrTone { info, success, warning, error }
 
 ThemeData idrTheme() {
-  final body = GoogleFonts.interTextTheme().apply(
+  final body = ThemeData.light().textTheme.apply(
+    fontFamily: 'Inter',
     bodyColor: IdrColors.text,
     displayColor: IdrColors.text,
   );

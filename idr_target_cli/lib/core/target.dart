@@ -9,18 +9,10 @@ import 'zones.dart';
 /// Billing portal origin for this build's flavor (`IDR_BILLING_PORTAL_URL`).
 String get portalBaseUrl => IdrFlavor.current.billingPortalUrl;
 
-/// CLI state dir: `%APPDATA%/to.idr/idrt` or `~/.config/to.idr/idrt`
-/// (`to.idr-dev`, … per flavor).
-Directory get cliDirectory {
-  final name = 'to.idr${IdrFlavor.current.stateSuffix}';
-  final appData = Platform.environment['APPDATA'];
-  if (appData != null && appData.isNotEmpty) {
-    return Directory(p.join(appData, name, 'idrt'));
-  }
-  return Directory(
-    p.join(Platform.environment['HOME'] ?? '.', '.config', name, 'idrt'),
-  );
-}
+/// CLI state dir: `%APPDATA%/idr.to-t/idrt` or `~/.config/idr.to-t/idrt`
+/// (`idr.to-t-dev`, … per flavor).
+Directory get cliDirectory =>
+    Directory(p.join(idrTargetStateDirectory.path, 'idrt'));
 
 /// The Target store shared with the Target GUI ([targetStoreFile]).
 final cliStore = SessionStore();

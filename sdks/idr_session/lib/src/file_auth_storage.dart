@@ -21,7 +21,7 @@ import 'flavor.dart';
 /// read-modify-write holds an OS lock on `<file>.lock` and replaces the file
 /// with a rename, so a crash never leaves it half written.
 ///
-/// Default location: `%APPDATA%\idr\secure\auth.json` or `~/.config/idr/secure/auth.json`.
+/// Default location: `%APPDATA%\idr.to-s\secure\auth.json` or `~/.config/idr.to-s/secure/auth.json`.
 class FileAuthStorage implements BillingAuthStorage {
   FileAuthStorage({File? file}) : _file = file ?? _defaultFile();
 

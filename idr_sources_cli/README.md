@@ -64,7 +64,7 @@ The Source needs the billing server and Presence running, and a Target online. S
 
 ## Configuration
 
-There is no config file to write: `--flavor dev|staging|prod` (default: prod for a release build, dev under `dart run`; see Flavors in `../README.md`) sets the endpoints and the state folder (`idr`, `idr-dev`, …). Overrides:
+There is no config file to write: `--flavor dev|staging|prod` (default: prod for a release build, dev under `dart run`; see Flavors in `../README.md`) sets the endpoints and the state folder (`idr.to-s`, `idr.to-s-dev`, …). Overrides:
 
 | Variable | Default (dev flavor) | Purpose |
 |---|---|---|
@@ -79,8 +79,8 @@ Files:
 
 | Path | Contents |
 |---|---|
-| `%APPDATA%/idr/secure/auth.json` (or `~/.config/idr/secure/auth.json`) | Sign-in session and the device identity: **private key** and certificate chain. Encrypted with DPAPI on Windows; plain JSON (mode 0600) elsewhere: protect it like a key. |
-| `%APPDATA%/idr/prefs.json` | Last Target FQHN, active service, active model |
+| `%APPDATA%/idr.to-s/secure/auth.json` (or `~/.config/idr.to-s/secure/auth.json`) | Sign-in session and the device identity: **private key** and certificate chain. Encrypted with DPAPI on Windows; plain JSON (mode 0600) elsewhere: protect it like a key. |
+| `%APPDATA%/idr.to-s/prefs.json` | Last Target FQHN, active service, active model |
 
 ## Commands
 
@@ -228,7 +228,7 @@ You get `target/release/source-agent.exe` (or `source-agent`).
 
 ### 2. Save this device's identity for the agent
 
-The agent proves who you are with the same key and certificate `idr enroll` created. `idr` keeps them in `%APPDATA%/idr/secure/auth.json` under `idr.source.identity`; copy that entry into a file of its own.
+The agent proves who you are with the same key and certificate `idr enroll` created. `idr` keeps them in `%APPDATA%/idr.to-s/secure/auth.json` under `idr.source.identity`; copy that entry into a file of its own.
 
 PowerShell:
 
@@ -244,15 +244,15 @@ $id = ($json | ConvertFrom-Json).'idr.source.identity'
 Linux / macOS (needs `jq`):
 
 ```bash
-jq -r '."idr.source.identity"' ~/.config/idr/secure/auth.json > ~/.config/idr/source-identity.json
-chmod 600 ~/.config/idr/source-identity.json
+jq -r '."idr.source.identity"' ~/.config/idr.to-s/secure/auth.json > ~/.config/idr.to-s/source-identity.json
+chmod 600 ~/.config/idr.to-s/source-identity.json
 ```
 
 The file contains your **private key**. Keep it on this machine, never share or commit it, and redo this step after `idr enroll` issues a new certificate.
 
 ### 3. Write the agent config
 
-Save it as, for example, `%APPDATA%/idr/source.toml`:
+Save it as, for example, `%APPDATA%/idr.to-s/source.toml`:
 
 ```toml
 [source]
@@ -294,7 +294,7 @@ Keep it running in its own terminal:
 source-agent --config "$env:APPDATA\idr\source.toml" run
 ```
 
-(Linux / macOS: `source-agent --config ~/.config/idr/source.toml run`.)
+(Linux / macOS: `source-agent --config ~/.config/idr.to-s/source.toml run`.)
 
 `session up fqhn=…` in its output means it is connected to that Target. Leave it running; it reconnects by itself when the network or the Target comes back.
 
