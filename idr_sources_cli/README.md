@@ -208,7 +208,7 @@ Send files and folders to a Target, and receive them from it. Transfers run in t
 - survives drops: an interrupted transfer resumes where it stopped, even after a restart of either side;
 - verifies every file by SHA-256 before it is moved into place.
 
-`idr transfer …` only talks to that agent. If the agent isn't running, you get `source-agent is not running`.
+`idr transfer …` only talks to that agent, and starts it when it isn't running (see Setup is automatic).
 
 ### Before you start
 
@@ -216,96 +216,18 @@ Send files and folders to a Target, and receive them from it. Transfers run in t
 - The Target runs a Target agent with file transfer on (the default for `idrt start` and the Target GUI).
 - Presence runs with `PRESENCE_SERVICE_TOKEN` set. Without it, the Target can't verify this Source and refuses transfers (`Target refused peer binding` in the agent log).
 
-### 1. Build the Source agent
+### Setup is automatic
 
-From `agents_engine/agent`:
+`idr transfer …` (and the menu's transfer items) set up and start the Source agent for you:
 
-```bash
-cargo build --release -p source-agent
-```
+- **Config:** `%APPDATA%/idr.to-s/source.toml` (`~/.config/idr.to-s/source.toml`): this build's Presence, the Targets to keep a session with (every Target you send to, plus your current one), and receiving into `Downloads/IDR`, asking first. It is rewritten when you send to a new Target.
+- **Agent:** `source-agent run` starts in the background when it isn't running (IDR Setup installs it next to `idr`), and restarts when the Targets change. It keeps running after `idr` and the terminal close.
+- **Log:** `%APPDATA%/idr.to-s/source-agent/agent.log`. `session up fqhn=…` means it is connected to that Target.
+- **Identity:** the agent gets this device's key through a temporary file that is deleted as soon as it has started; the key is never kept in plain text.
 
-You get `target/release/source-agent.exe` (or `source-agent`).
+To stop the agent, end `source-agent` in Task Manager (or `pkill source-agent`); the next `idr transfer` starts it again.
 
-### 2. Save this device's identity for the agent
-
-The agent proves who you are with the same key and certificate `idr enroll` created. `idr` keeps them in `%APPDATA%/idr.to-s/secure/auth.json` under `idr.source.identity`; copy that entry into a file of its own.
-
-PowerShell:
-
-```powershell
-# auth.json is DPAPI-encrypted: decrypt it as your Windows user.
-Add-Type -AssemblyName System.Security
-$raw = [IO.File]::ReadAllBytes("$env:APPDATA\idr\secure\auth.json")
-$json = [Text.Encoding]::UTF8.GetString([Security.Cryptography.ProtectedData]::Unprotect($raw, $null, 'CurrentUser'))
-$id = ($json | ConvertFrom-Json).'idr.source.identity'
-[IO.File]::WriteAllText("$env:APPDATA\idr\source-identity.json", $id)   # no BOM
-```
-
-Linux / macOS (needs `jq`):
-
-```bash
-jq -r '."idr.source.identity"' ~/.config/idr.to-s/secure/auth.json > ~/.config/idr.to-s/source-identity.json
-chmod 600 ~/.config/idr.to-s/source-identity.json
-```
-
-The file contains your **private key**. Keep it on this machine, never share or commit it, and redo this step after `idr enroll` issues a new certificate.
-
-### 3. Write the agent config
-
-Save it as, for example, `%APPDATA%/idr.to-s/source.toml`:
-
-```toml
-[source]
-source_id = "my-laptop"            # any label; shows in logs
-
-[presence]
-discovery_url = "http://127.0.0.1:8081/.well-known/idr-presence.json"
-discovery_key = ""                 # empty = dev (unsigned discovery accepted)
-
-[dp]
-identity_path = "C:/Users/you/AppData/Roaming/idr/source-identity.json"
-
-[daemon]
-data_dir = "C:/Users/you/AppData/Roaming/idr/source-agent"   # transfer queue and state
-targets = ["laptop--you@example.com.idr.to"]                  # Targets to stay connected to
-
-[file_transfer]
-enabled = true
-receive_dir = "C:/Users/you/Downloads/IDR"   # where accepted files land
-interactive = true                           # ask before accepting (see "Receiving")
-# permitted_dirs = ["D:/Shared"]             # other folders `accept --out` may use
-```
-
-| Setting | Meaning |
-|---|---|
-| `[daemon].targets` | Every Target this machine keeps a session with. You can only send to, and receive from, these. List several to use several Targets. |
-| `[file_transfer].enabled` | Off unless `true` |
-| `receive_dir` | Default folder for accepted transfers. Created if missing. |
-| `interactive` | `true`: incoming offers wait for `idr transfer accept`/`reject`. `false` (headless): offers are refused unless a peer rule allows them. |
-| `permitted_dirs` | Extra folders `accept --out` may write to. `receive_dir` and its subfolders are always allowed. |
-| `[[file_transfer.peers]]` `ski`, `auto_accept`, `auto_accept_max_bytes` | Accept offers from that Target automatically, up to a size |
-| `lease_minutes` | How long one authorization lasts (default 15, at least 5). The agent then re-authorizes through Presence; transfers pause for a moment and continue. |
-
-### 4. Run the agent
-
-Keep it running in its own terminal:
-
-```powershell
-source-agent --config "$env:APPDATA\idr\source.toml" run
-```
-
-(Linux / macOS: `source-agent --config ~/.config/idr.to-s/source.toml run`.)
-
-`session up fqhn=…` in its output means it is connected to that Target. Leave it running; it reconnects by itself when the network or the Target comes back.
-
-Point `idr` at the same agent and config in the shell where you run `idr transfer` (add these to your profile to keep them):
-
-```powershell
-$env:IDR_SOURCE_AGENT  = "C:\dev\idrto\agents_engine\agent\target\release\source-agent.exe"
-$env:IDR_SOURCE_CONFIG = "$env:APPDATA\idr\source.toml"
-```
-
-`IDR_SOURCE_AGENT` can be left unset when `source-agent` is on your `PATH`.
+To run the agent yourself instead (another config, a service manager), set `IDR_SOURCE_CONFIG` to your own config file; `idr` then uses it as is and never starts the agent. `source-agent --config <file> --identity <identity.json> run`, with the identity exported from `secure/auth.json` (`idr.source.identity`); see `agents_engine/agent/config/source.example.toml` for every setting.
 
 From the interactive menu (`idr` with no arguments), once a Target is set:
 
@@ -412,7 +334,7 @@ Start with `idr doctor` (add `--connect` to test the whole path). Exit codes: `0
 | `The chat REPL needs an interactive terminal.` | Run from a script or pipe, or with `--no-input` | Use `--prompt "…"` |
 | `idr doctor` exits `5`, library `not found` | `idr_c_api` or `idr_dp` not found | Build them and copy them next to `idr`, or set `IDR_C_API_LIB` / `IDR_DP_LIB` |
 | `cannot load …: a library it depends on is missing` | On Windows, `idr_c_api.dll` needs OpenSSL 3 and the VC++ runtime | See [Build and distribute](../README.md#build-and-distribute) |
-| `source-agent is not running` (`idr transfer …`) | The Source agent isn't started, or `IDR_SOURCE_CONFIG` points at another config | Start `source-agent --config … run` and set `IDR_SOURCE_CONFIG` to the same file |
+| `source-agent did not start` (`idr transfer …`) | The agent exited at startup (no network, Presence unreachable, identity not approved) | Read `%APPDATA%/idr.to-s/source-agent/agent.log`, fix the cause, run the command again |
 | Agent log: `Target refused peer binding; transfers disabled on this session` | The Target couldn't verify this Source: Presence runs without `PRESENCE_SERVICE_TOKEN`, or the device was revoked | Start Presence with the token; check the device in `idrt … devices` |
 | Agent log: `DP identity file missing; continuing unenrolled` | `[dp].identity_path` is wrong, or the file was never exported | Redo [step 2](#2-save-this-devices-identity-for-the-agent) |
 | `idr transfer send` stays `running` | The Target hasn't accepted yet, or the Target isn't in `[daemon].targets` | Ask the Target to accept; add the FQHN to `targets` and restart the agent |

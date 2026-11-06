@@ -110,7 +110,7 @@ String _unquote(String v) {
 }
 
 /// Pending offers to answer, and the full list. Loading asks the Source
-/// agent, so a stopped agent shows its "start source-agent run" hint here.
+/// agent (idr starts it first when it is not running).
 Future<Menu> transfersMenu({String? executable}) async {
   final all = ((await agentTransfer(['list'], executable: executable)) as List)
       .cast<Map<dynamic, dynamic>>();

@@ -1,6 +1,8 @@
 import 'dart:io';
 
 import 'package:idr_cli_core/idr_cli_core.dart';
+import 'package:idr_source/idr_source.dart' show IdrFlavor;
+import 'package:idr_sources_cli/commands/source_agent.dart';
 import 'package:idr_sources_cli/commands/transfer.dart';
 import 'package:idr_sources_cli/menu.dart';
 import 'package:test/test.dart';
@@ -29,6 +31,21 @@ void main() {
 
   String recorded() => File('${dir.path}${Platform.pathSeparator}args.txt').readAsStringSync().trim();
 
+  test('the generated agent config lists its Targets and reads them back', () {
+    IdrFlavor.current = const IdrFlavor(name: 'prod', discovery: 'https://public.idr.to/d.json');
+    final toml = sourceConfigToml(
+      targets: ['laptop--a@b.com.idr.to', 'nas--a@b.com.idr.to'],
+      dataDir: r'C:\Users\me\AppData\Roaming\idr.to-s\source-agent',
+      receiveDir: r'C:\Users\me\Downloads\IDR',
+      sourceId: 'desktop',
+    );
+    expect(configTargets(toml), ['laptop--a@b.com.idr.to', 'nas--a@b.com.idr.to']);
+    expect(toml, contains(r'data_dir = "C:\\Users\\me\\AppData'));
+    expect(toml, contains('discovery_key = "ri-IX'));
+    expect(toml, contains('enabled = true'));
+    expect(configTargets(''), isEmpty);
+  });
+
   test('passes the subcommand through with --json and returns data', () async {
     final exe = await _fakeAgent(dir, '{"ok": true, "data": [{"id": "ab"}]}');
     final data = await agentTransfer(['list'], executable: exe);
@@ -54,7 +71,7 @@ void main() {
         () => agentTransfer(['list'], executable: exe),
         throwsA(isA<CliError>()
             .having((e) => e.exitCode, 'exitCode', CliExit.connect)
-            .having((e) => e.hint, 'hint', contains('source-agent run'))));
+            .having((e) => e.hint, 'hint', contains('Run the command again'))));
   });
 
   test('transfers menu offers accept/reject only for pending incoming offers', () async {

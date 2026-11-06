@@ -3,15 +3,17 @@ import 'dart:io';
 
 import 'package:args/command_runner.dart';
 import 'package:idr_cli_core/idr_cli_core.dart';
-import 'package:idr_source/idr_source.dart' show idrSourceDirectory;
+import 'package:idr_source/idr_source.dart' show canonicalPresenceFqhn;
 
+import 'source_agent.dart';
 
 /// `idr transfer …`: file transfer owned by the running `source-agent`.
 ///
 /// Each subcommand asks the agent over its local, owner-only IPC by running
 /// `source-agent transfer --json …` (the same contract its own CLI uses), so a
-/// transfer keeps going when this command exits. The agent binary comes from
-/// `IDR_SOURCE_AGENT` or `PATH`; its config from `IDR_SOURCE_CONFIG`.
+/// transfer keeps going when this command exits. idr writes the agent's config
+/// and starts it when needed ([ensureSourceAgent]); the binary comes from
+/// `IDR_SOURCE_AGENT`, next to idr, or `PATH`.
 class TransferCommand extends Command<int> {
   TransferCommand() {
     addSubcommand(_Send());
@@ -30,7 +32,7 @@ class TransferCommand extends Command<int> {
 
   @override
   String get description =>
-      'Send files or folders to a Target and manage transfers (needs `source-agent run`).';
+      'Send files or folders to a Target and manage transfers (starts the Source agent when needed).';
 }
 
 String _join(List<String> parts) => parts.join(Platform.pathSeparator);
@@ -55,36 +57,22 @@ String sourceAgentExecutable() {
   return 'source-agent';
 }
 
-/// The agent's config: `IDR_SOURCE_CONFIG`, else `%APPDATA%/idr.to-s/source.toml`
-/// (`~/.config/idr.to-s/source.toml`; per flavor) when it exists.
-String? sourceAgentConfig() {
-  final env = Platform.environment['IDR_SOURCE_CONFIG']?.trim();
-  if (env != null && env.isNotEmpty) return env;
-  final f = _join([idrSourceDirectory.path, 'source.toml']);
-  return File(f).existsSync() ? f : null;
-}
-
 /// Runs `source-agent transfer --json <args>` and returns its `data`.
-Future<Object?> agentTransfer(List<String> args, {String? executable}) async {
+/// Without [executable] (tests pass a stand-in) the agent is set up and started
+/// first, with [target] among its Targets.
+Future<Object?> agentTransfer(List<String> args, {String? executable, String? target}) async {
   final exe = executable ?? sourceAgentExecutable();
-  final config = executable == null ? sourceAgentConfig() : null;
+  final config = executable == null ? await ensureSourceAgent(exe, target: target) : null;
   final ProcessResult r;
   try {
     r = await Process.run(exe, [if (config != null) ...['--config', config], 'transfer', '--json', ...args]);
   } on ProcessException {
-    throw CliError(CliExit.config, 'source-agent was not found.',
-        hint: 'Build it (cargo build --release -p source-agent), or set IDR_SOURCE_AGENT to its path.',
-        code: 'AGENT_MISSING');
+    throw agentMissing;
   }
   final err = '${r.stderr}';
   if (err.contains('is not running')) {
-    throw const CliError(CliExit.connect, 'source-agent is not running.',
-        hint: 'Start it with: source-agent run (add --config <your source.toml>)', code: 'AGENT_NOT_RUNNING');
-  }
-  if (config == null && err.contains('load ') && err.contains('source.example.toml')) {
-    throw const CliError(CliExit.config, 'No Source agent config found.',
-        hint: 'Create %APPDATA%/idr.to-s/source.toml (see the README, File transfer), or set IDR_SOURCE_CONFIG.',
-        code: 'AGENT_CONFIG_MISSING');
+    throw CliError(CliExit.connect, 'source-agent is not running.',
+        hint: 'Run the command again to restart it. Its output: $agentLogPath', code: 'AGENT_NOT_RUNNING');
   }
   final Map<String, dynamic> resp;
   try {
@@ -179,13 +167,17 @@ class _Send extends Command<int> {
     if (files.isEmpty == dirs.isEmpty || dirs.length > 1) {
       usageException('Send one or more --file, or one --dir.');
     }
+    final target = canonicalPresenceFqhn(argResults!['target'] as String);
+    if (!target.contains('--')) {
+      usageException('A Target looks like laptop--you@example.com (two hyphens); `idr status` shows yours.');
+    }
     final data = await agentTransfer([
       'send',
       '--target',
-      argResults!['target'] as String,
+      target,
       for (final f in files) ...['--file', f],
       for (final d in dirs) ...['--dir', d],
-    ]);
+    ], target: target);
     ui.result(data, human: () {
       ui.success('Queued ${(data as Map)['id']}.');
       ui.hint('Follow it with: idr transfer status ${data['id']}');
