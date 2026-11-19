@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Tokens from the IDR design system (Instrument Sans, Inter, JetBrains Mono;
 /// bundled in assets/fonts, so nothing is downloaded at runtime).

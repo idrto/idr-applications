@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:idr_target/idr_target.dart';
 
 import '../../target/target_controller.dart';
