@@ -9,8 +9,8 @@ import 'zones.dart';
 /// Billing portal origin for this build's flavor (`IDR_BILLING_PORTAL_URL`).
 String get portalBaseUrl => IdrFlavor.current.billingPortalUrl;
 
-/// CLI state dir: `%APPDATA%/idr.to-t/idrt` or `~/.config/idr.to-t/idrt`
-/// (`idr.to-t-dev`, … per flavor).
+/// CLI state dir: `%APPDATA%/idr.to/target/idrt` or `~/.config/idr.to/target/idrt`
+/// (`idr.to/target-dev`, … per flavor).
 Directory get cliDirectory =>
     Directory(p.join(idrTargetStateDirectory.path, 'idrt'));
 

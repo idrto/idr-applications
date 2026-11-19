@@ -9,18 +9,15 @@ import 'package:idr_session/idr_session.dart';
 
 /// This machine's Target, shared by the Target GUI and `idrt`: agent files
 /// here, sign-in and identity in [targetStoreFile].
-/// `%APPDATA%/idr.to-t/idr_target` (`~/.config/idr.to-t/idr_target`
-/// elsewhere); `idr.to-t-dev`, `idr.to-t-staging` for those flavors
+/// `%APPDATA%/idr.to/target/idr_target` (`~/.config/idr.to/target/idr_target`
+/// elsewhere); `idr.to/target-dev`, `idr.to/target-staging` for those flavors
 /// ([IdrFlavor.current]).
 Directory get defaultTargetDirectory =>
     Directory(p.join(idrTargetStateDirectory.path, 'idr_target'));
 
-/// `%APPDATA%/idr.to-t` (per flavor): everything the Target GUI and `idrt`
-/// keep. Older builds used `to.idr` (in `$HOME` outside Windows); moved here once.
-Directory get idrTargetStateDirectory => idrStateDirectory('idr.to-t', legacy: [
-      p.join(idrStateBase, 'to.idr'),
-      if (!Platform.isWindows) p.join(Platform.environment['HOME'] ?? '.', 'to.idr'),
-    ]);
+/// `%APPDATA%/idr.to/target` (per flavor): everything the Target GUI and `idrt`
+/// keep. Resolves the path without migrating existing state.
+Directory get idrTargetStateDirectory => idrStateDirectory('target');
 
 /// The Target's sign-in session, bound org, identity and CA keys
 /// (DPAPI-encrypted on Windows, see [FileAuthStorage]).

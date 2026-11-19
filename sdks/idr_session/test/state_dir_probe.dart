@@ -1,7 +1,13 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:idr_session/idr_session.dart';
 
-/// Run by state_dir_test.dart with a temp APPDATA/HOME: prints the folder.
-void main() => stdout.write(idrStateDirectory('idr.to-t',
-    legacy: ['$idrStateBase${Platform.pathSeparator}old']).path);
+/// Run by state_dir_test.dart with a temp APPDATA/HOME: prints both paths.
+void main(List<String> args) {
+  IdrFlavor.current = IdrFlavor(name: args.single);
+  stdout.write(jsonEncode({
+    'source': idrSourceDirectory.path,
+    'target': idrStateDirectory('target').path,
+  }));
+}

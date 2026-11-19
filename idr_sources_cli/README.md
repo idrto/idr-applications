@@ -64,7 +64,7 @@ The Source needs the billing server and Presence running, and a Target online. S
 
 ## Configuration
 
-There is no config file to write: `--flavor dev|staging|prod` (default: prod for a release build, dev under `dart run`; see Flavors in `../README.md`) sets the endpoints and the state folder (`idr.to-s`, `idr.to-s-dev`, …). Overrides:
+There is no config file to write: `--flavor dev|staging|prod` (default: prod for a release build, dev under `dart run`; see Flavors in `../README.md`) sets the endpoints and the state folder (`idr.to/source`, `idr.to/source-dev`, …). Overrides:
 
 | Variable | Default (dev flavor) | Purpose |
 |---|---|---|
@@ -79,8 +79,8 @@ Files:
 
 | Path | Contents |
 |---|---|
-| `%APPDATA%/idr.to-s/secure/auth.json` (or `~/.config/idr.to-s/secure/auth.json`) | Sign-in session and the device identity: **private key** and certificate chain. Encrypted with DPAPI on Windows; plain JSON (mode 0600) elsewhere: protect it like a key. |
-| `%APPDATA%/idr.to-s/prefs.json` | Last Target FQHN, active service, active model |
+| `%APPDATA%/idr.to/source/secure/auth.json` (or `~/.config/idr.to/source/secure/auth.json`) | Sign-in session and the device identity: **private key** and certificate chain. Encrypted with DPAPI on Windows; plain JSON (mode 0600) elsewhere: protect it like a key. |
+| `%APPDATA%/idr.to/source/prefs.json` | Last Target FQHN, active service, active model |
 
 ## Commands
 
@@ -220,9 +220,9 @@ Send files and folders to a Target, and receive them from it. Transfers run in t
 
 `idr transfer …` (and the menu's transfer items) set up and start the Source agent for you:
 
-- **Config:** `%APPDATA%/idr.to-s/source.toml` (`~/.config/idr.to-s/source.toml`): this build's Presence, the Targets to keep a session with (every Target you send to, plus your current one), and receiving into `Downloads/IDR`, asking first. It is rewritten when you send to a new Target.
+- **Config:** `%APPDATA%/idr.to/source/source.toml` (`~/.config/idr.to/source/source.toml`): this build's Presence, the Targets to keep a session with (every Target you send to, plus your current one), and receiving into `Downloads/IDR`, asking first. It is rewritten when you send to a new Target.
 - **Agent:** `source-agent run` starts in the background when it isn't running (IDR Setup installs it next to `idr`), and restarts when the Targets change. It keeps running after `idr` and the terminal close.
-- **Log:** `%APPDATA%/idr.to-s/source-agent/agent.log`. `session up fqhn=…` means it is connected to that Target.
+- **Log:** `%APPDATA%/idr.to/source/source-agent/agent.log`. `session up fqhn=…` means it is connected to that Target.
 - **Identity:** the agent gets this device's key through a temporary file that is deleted as soon as it has started; the key is never kept in plain text.
 
 To stop the agent, end `source-agent` in Task Manager (or `pkill source-agent`); the next `idr transfer` starts it again.
@@ -334,7 +334,7 @@ Start with `idr doctor` (add `--connect` to test the whole path). Exit codes: `0
 | `The chat REPL needs an interactive terminal.` | Run from a script or pipe, or with `--no-input` | Use `--prompt "…"` |
 | `idr doctor` exits `5`, library `not found` | `idr_c_api` or `idr_dp` not found | Build them and copy them next to `idr`, or set `IDR_C_API_LIB` / `IDR_DP_LIB` |
 | `cannot load …: a library it depends on is missing` | On Windows, `idr_c_api.dll` needs OpenSSL 3 and the VC++ runtime | See [Build and distribute](../README.md#build-and-distribute) |
-| `source-agent did not start` (`idr transfer …`) | The agent exited at startup (no network, Presence unreachable, identity not approved) | Read `%APPDATA%/idr.to-s/source-agent/agent.log`, fix the cause, run the command again |
+| `source-agent did not start` (`idr transfer …`) | The agent exited at startup (no network, Presence unreachable, identity not approved) | Read `%APPDATA%/idr.to/source/source-agent/agent.log`, fix the cause, run the command again |
 | Agent log: `Target refused peer binding; transfers disabled on this session` | The Target couldn't verify this Source: Presence runs without `PRESENCE_SERVICE_TOKEN`, or the device was revoked | Start Presence with the token; check the device in `idrt … devices` |
 | Agent log: `DP identity file missing; continuing unenrolled` | `[dp].identity_path` is wrong, or the file was never exported | Redo [step 2](#2-save-this-devices-identity-for-the-agent) |
 | `idr transfer send` stays `running` | The Target hasn't accepted yet, or the Target isn't in `[daemon].targets` | Ask the Target to accept; add the FQHN to `targets` and restart the agent |

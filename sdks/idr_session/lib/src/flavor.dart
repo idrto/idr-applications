@@ -30,8 +30,8 @@ class IdrFlavor {
   /// flavor with no URLs, so anything needing one fails loudly.
   static IdrFlavor current = const IdrFlavor(name: 'prod');
 
-  /// Appended to state folder names (`idr.to-t-dev`, `idr.to-s-dev`) so flavors on
-  /// one machine never share a sign-in or a Target identity.
+  /// Appended to source/target folder names under `idr.to` so flavors on one
+  /// machine never share a sign-in or a Target identity.
   String get stateSuffix => name == 'prod' ? '' : '-$name';
 
   /// The flavor without `--flavor`: `prod` in a compiled release build
@@ -115,9 +115,8 @@ class IdrFlavor {
 }
 
 /// The `idr` (Source) state folder for [IdrFlavor.current]:
-/// `%APPDATA%/idr.to-s` or `~/.config/idr.to-s` (`idr.to-s-dev`, …).
-Directory get idrSourceDirectory =>
-    idrStateDirectory('idr.to-s', legacy: [_join([idrStateBase, 'idr'])]);
+/// `%APPDATA%/idr.to/source` or `~/.config/idr.to/source` (`idr.to/source-dev`, …).
+Directory get idrSourceDirectory => idrStateDirectory('source');
 
 /// Where state folders live: `%APPDATA%` on Windows, else `~/.config`.
 String get idrStateBase {
@@ -126,30 +125,10 @@ String get idrStateBase {
   return _join([Platform.environment['HOME'] ?? '.', '.config']);
 }
 
-final _stateDirs = <String, Directory>{};
-
-/// `<idrStateBase>/<name><flavor suffix>`. On first use, if it doesn't exist
-/// yet, moves the first existing [legacy] folder (older name, same suffix
-/// appended) there so an upgrade keeps its sign-in and identity. If the move
-/// fails (files open by a running agent) this run keeps using the old folder
-/// and the next run retries.
-Directory idrStateDirectory(String name, {List<String> legacy = const []}) {
-  final sfx = IdrFlavor.current.stateSuffix;
-  return _stateDirs.putIfAbsent('$name$sfx', () {
-    final dir = Directory(_join([idrStateBase, '$name$sfx']));
-    if (dir.existsSync()) return dir;
-    for (final path in legacy) {
-      final old = Directory('$path$sfx');
-      if (!old.existsSync()) continue;
-      try {
-        dir.parent.createSync(recursive: true);
-        return old.renameSync(dir.path);
-      } on FileSystemException {
-        return old;
-      }
-    }
-    return dir;
-  });
-}
+/// `<idrStateBase>/idr.to/<name><flavor suffix>`.
+/// Resolves the configured path without reading or moving existing state.
+Directory idrStateDirectory(String name) => Directory(
+      _join([idrStateBase, 'idr.to', '$name${IdrFlavor.current.stateSuffix}']),
+    );
 
 String _join(List<String> parts) => parts.join(Platform.pathSeparator);

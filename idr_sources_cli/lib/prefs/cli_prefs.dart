@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:idr_source/idr_source.dart';
 import 'package:path/path.dart' as p;
 
-/// CLI prefs directory: `%APPDATA%/idr.to-s` or `~/.config/idr.to-s` (per flavor).
+/// CLI prefs directory: `%APPDATA%/idr.to/source` or `~/.config/idr.to/source` (per flavor).
 Directory cliConfigDirectory() => idrSourceDirectory;
 
 /// Organizations this machine enrolled into (billing doesn't list them).

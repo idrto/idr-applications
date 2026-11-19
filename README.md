@@ -90,9 +90,9 @@ flutter run -d windows -a --flavor=dev
 
 | Flavor | Backend (`config/<name>.json`) | State folders |
 |---|---|---|
-| `prod` | `https://billing.idr.to` (API under `/api/*`, portal at `/`), `https://public.idr.to` | `%APPDATA%\idr.to-s`, `%APPDATA%\idr.to-t` |
-| `staging` | not set yet: pass the env vars below | `%APPDATA%\idr.to-s-staging`, `%APPDATA%\idr.to-t-staging` |
-| `dev` | `127.0.0.1:3000`, `127.0.0.1:8081`, portal `localhost:5173` | `%APPDATA%\idr.to-s-dev`, `%APPDATA%\idr.to-t-dev` |
+| `prod` | `https://billing.idr.to` (API under `/api/*`, portal at `/`), `https://public.idr.to` | `%APPDATA%\idr.to\source`, `%APPDATA%\idr.to\target` |
+| `staging` | not set yet: pass the env vars below | `%APPDATA%\idr.to\source-staging`, `%APPDATA%\idr.to\target-staging` |
+| `dev` | `127.0.0.1:3000`, `127.0.0.1:8081`, portal `localhost:5173` | `%APPDATA%\idr.to\source-dev`, `%APPDATA%\idr.to\target-dev` |
 
 `config/` is looked up next to the executable first (CI ships only `config/prod.json` there), then upward from the working directory, so a repo checkout finds `applications/apps/config/`. Keys: `controlPlane`, `discovery`, `billingPortal`, `dev` (local stack: development mode, insecure Presence). For one run, `IDR_CONTROL_PLANE_URL` (`IDR_API_BASE_URL` for `idr`), `IDR_DISCOVERY_URL` and `IDR_BILLING_PORTAL_URL` override the file; a flavor with no URL and no env var stops with an error naming the variable.
 
@@ -151,9 +151,9 @@ Configuration and state (there is no config file; endpoints come from environmen
 
 | CLI | Where | What |
 |---|---|---|
-| `idr` | `%APPDATA%\idr.to-s\` (Windows), `~/.config/idr.to-s/`; `idr.to-s-dev`, `idr.to-s-staging` for those flavors | `secure/auth.json` (session, device private key and certificate), `prefs.json` |
-| `idrt` and the Target GUI (shared) | `%APPDATA%\idr.to-t\idr_target\` (`~/.config/idr.to-t/idr_target/` elsewhere); `idr.to-t-dev`, `idr.to-t-staging` for those flavors | `secure/auth.json` (session, bound org, identity, CA private keys on admin machines), agent config, certificate, agent database |
-| `idrt` | `%APPDATA%\idr.to-t\idrt\`, `~/.config/idr.to-t/idrt/` | `orgs.json` (org picker history) |
+| `idr` | `%APPDATA%\idr.to\source\` (Windows), `~/.config/idr.to/source/`; `idr.to/source-dev`, `idr.to/source-staging` for those flavors | `secure/auth.json` (session, device private key and certificate), `prefs.json` |
+| `idrt` and the Target GUI (shared) | `%APPDATA%\idr.to\target\idr_target\` (`~/.config/idr.to/target/idr_target/` elsewhere); `idr.to/target-dev`, `idr.to/target-staging` for those flavors | `secure/auth.json` (session, bound org, identity, CA private keys on admin machines), agent config, certificate, agent database |
+| `idrt` | `%APPDATA%\idr.to\target\idrt\`, `~/.config/idr.to/target/idrt/` | `orgs.json` (org picker history) |
 
 `auth.json` is encrypted with Windows DPAPI (readable only by your Windows account); on Linux / macOS it is plain JSON with mode 0600.
 

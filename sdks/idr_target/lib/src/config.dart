@@ -126,7 +126,7 @@ class IdrTargetConfig {
   final bool insecureDev;
   final IdrTlsConfig tls;
 
-  /// Override config dir; default `%APPDATA%/idr.to-t/idr_target` on Windows.
+  /// Override config dir; default `%APPDATA%/idr.to/target/idr_target` on Windows.
   final String? configDirectory;
 
   final int maxAgentRestarts;

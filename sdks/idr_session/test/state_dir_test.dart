@@ -1,47 +1,55 @@
+import 'dart:convert';
 import 'dart:io';
 
-import 'package:idr_session/idr_session.dart';
+import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
-/// [idrStateDirectory] reads `APPDATA`/`HOME` from the environment, so each
-/// case runs state_dir_probe.dart in a child process with a temp base folder.
+/// Each probe runs with a temporary APPDATA/HOME, never the user's profile.
 void main() {
   late Directory base;
   setUp(() => base = Directory.systemTemp.createTempSync('idr_state_'));
   tearDown(() => base.deleteSync(recursive: true));
 
-  Future<String> resolve() async {
+  Future<Map<String, dynamic>> resolve(String flavor) async {
     final r = await Process.run(
       Platform.resolvedExecutable,
-      ['run', 'test/state_dir_probe.dart'],
+      ['run', 'test/state_dir_probe.dart', flavor],
       environment: Platform.isWindows
           ? {'APPDATA': base.path}
           : {'APPDATA': '', 'HOME': base.path},
     );
     expect(r.exitCode, 0, reason: '${r.stderr}');
-    return '${r.stdout}';
+    return jsonDecode('${r.stdout}') as Map<String, dynamic>;
   }
 
   String root() => Platform.isWindows
       ? base.path
-      : '${base.path}${Platform.pathSeparator}.config';
+      : p.join(base.path, '.config');
 
-  test('moves the legacy folder and keeps its files', () async {
-    final old = Directory('${root()}${Platform.pathSeparator}old')
+  for (final flavor in ['prod', 'dev', 'staging']) {
+    test('$flavor resolves separate source and target paths without creating state', () async {
+      final suffix = flavor == 'prod' ? '' : '-$flavor';
+      expect(await resolve(flavor), {
+        'source': p.join(root(), 'idr.to', 'source$suffix'),
+        'target': p.join(root(), 'idr.to', 'target$suffix'),
+      });
+      expect(base.listSync(), isEmpty);
+    });
+  }
+
+  test('resolving paths leaves existing directories and files untouched', () async {
+    final existing = Directory(p.join(root(), 'existing-profile'))
       ..createSync(recursive: true);
-    File('${old.path}${Platform.pathSeparator}auth.json').writeAsStringSync('x');
+    final marker = File(p.join(existing.path, 'auth.json'))
+      ..writeAsStringSync('unchanged');
+    final target = Directory(p.join(root(), 'idr.to', 'target'))
+      ..createSync(recursive: true);
+    final targetMarker = File(p.join(target.path, 'marker'))
+      ..writeAsStringSync('target');
 
-    final dir = await resolve();
-    expect(dir, '${root()}${Platform.pathSeparator}idr.to-t');
-    expect(File('$dir${Platform.pathSeparator}auth.json').readAsStringSync(), 'x');
-    expect(old.existsSync(), isFalse);
-  });
-
-  test('new folder wins when both exist', () async {
-    Directory('${root()}${Platform.pathSeparator}old').createSync(recursive: true);
-    Directory('${root()}${Platform.pathSeparator}idr.to-t').createSync(recursive: true);
-
-    expect(await resolve(), '${root()}${Platform.pathSeparator}idr.to-t');
-    expect(Directory('${root()}${Platform.pathSeparator}old').existsSync(), isTrue);
+    expect((await resolve('prod'))['target'], target.path);
+    expect(marker.readAsStringSync(), 'unchanged');
+    expect(targetMarker.readAsStringSync(), 'target');
+    expect(Directory(p.join(root(), 'idr.to', 'source')).existsSync(), isFalse);
   });
 }

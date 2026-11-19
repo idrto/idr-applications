@@ -35,7 +35,7 @@ void main() {
     IdrFlavor.current = const IdrFlavor(name: 'prod', discovery: 'https://public.idr.to/d.json');
     final toml = sourceConfigToml(
       targets: ['laptop--a@b.com.idr.to', 'nas--a@b.com.idr.to'],
-      dataDir: r'C:\Users\me\AppData\Roaming\idr.to-s\source-agent',
+      dataDir: r'C:\Users\me\AppData\Roaming\idr.to\source\source-agent',
       receiveDir: r'C:\Users\me\Downloads\IDR',
       sourceId: 'desktop',
     );
