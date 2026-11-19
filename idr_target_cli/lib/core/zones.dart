@@ -99,13 +99,13 @@ Future<bool> ensureZoneKey(
   if (status == 'approved') {
     ui.info(
       'This machine holds the key for zone $zone: it approves $zone\'s '
-      'machines and Sources (`idrt` > Pending approvals).',
+      'machines and Sources (`idr` > Pending approvals).',
     );
     return true;
   }
   ui.info('Asked the root admin to sign this machine\'s key for zone $zone.');
   ui.hint(
-    'They approve it in `idrt` > Pending approvals. Open `idrt` here '
+    'They approve it in `idr` > Pending approvals. Open `idr` here '
     'afterwards; the key is picked up automatically.',
   );
   return false;

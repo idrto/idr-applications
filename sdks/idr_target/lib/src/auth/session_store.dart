@@ -7,7 +7,7 @@ import 'package:two_key_dart_sdk/two_key_headless.dart';
 
 import 'package:idr_session/idr_session.dart';
 
-/// This machine's Target, shared by the Target GUI and `idrt`: agent files
+/// This machine's Target, shared by the Target GUI and `idr`: agent files
 /// here, sign-in and identity in [targetStoreFile].
 /// `%APPDATA%/idr.to/target/idr_target` (`~/.config/idr.to/target/idr_target`
 /// elsewhere); `idr.to/target-dev`, `idr.to/target-staging` for those flavors
@@ -15,7 +15,7 @@ import 'package:idr_session/idr_session.dart';
 Directory get defaultTargetDirectory =>
     Directory(p.join(idrTargetStateDirectory.path, 'idr_target'));
 
-/// `%APPDATA%/idr.to/target` (per flavor): everything the Target GUI and `idrt`
+/// `%APPDATA%/idr.to/target` (per flavor): everything the Target GUI and `idr`
 /// keep. Resolves the path without migrating existing state.
 Directory get idrTargetStateDirectory => idrStateDirectory('target');
 
@@ -27,7 +27,7 @@ File get targetStoreFile =>
 /// Namespaced JSON/secret persistence over the billing SDK [BillingAuthStorage].
 ///
 /// Writes are serialized within this process; [FileAuthStorage] also locks
-/// across processes, so the GUI and `idrt` can share the default store.
+/// across processes, so the GUI and `idr` can share the default store.
 class SessionStore {
   SessionStore({
     BillingAuthStorage? storage,

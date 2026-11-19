@@ -16,7 +16,7 @@ import 'commands/version.dart';
 import 'menu.dart';
 
 Future<int> runIdrCli(List<String> args) => (CliRunner(
-      'idr',
+      'idrs',
       'IDR Source: sign in, enroll this machine, connect to a Target and use '
           'its services.',
       version: idrVersion,

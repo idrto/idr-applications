@@ -49,8 +49,8 @@ Future<CliOrg> _requireOrg() async {
       CliExit.usage,
       'This machine is not bound to an organization yet.',
       hint:
-          'Finish Enterprise setup: `idrt enterprise setup --org <slug>`, '
-          'or run `idrt` for the menu.',
+          'Finish Enterprise setup: `idr enterprise setup --org <slug>`, '
+          'or run `idr` for the menu.',
       code: 'ORG_REQUIRED',
     );
   }
@@ -78,7 +78,7 @@ String _pickZone(IdrTarget target, String? given) {
       'This organization has no zones on this machine yet.',
       hint:
           'Create one on the root CA admin machine: '
-          '`idrt enterprise zone add <name>`.',
+          '`idr enterprise zone add <name>`.',
       code: 'NO_ZONES',
     );
   }
@@ -261,7 +261,7 @@ Future<List<String>?> _billingZones(IdrTarget target) async {
   }
 }
 
-/// `idrt enterprise setup --org <slug> [--role admin|target] [--host …]`
+/// `idr enterprise setup --org <slug> [--role admin|target] [--host …]`
 class _Setup extends Command<int> {
   _Setup() {
     argParser
@@ -327,7 +327,7 @@ class _Setup extends Command<int> {
     );
     if (slug == 'me' || slug == 'personal') {
       usageException(
-        'That is your personal account; use `idrt personal setup`.',
+        'That is your personal account; use `idr personal setup`.',
       );
     }
 
@@ -378,7 +378,7 @@ class _Setup extends Command<int> {
       throw const CliError(
         CliExit.usage,
         'This machine is already the admin machine (it can serve services '
-        'too). Run `idrt logout` to start over.',
+        'too). Run `idr logout` to start over.',
       );
     }
 
@@ -420,7 +420,7 @@ class _Setup extends Command<int> {
         entityId: argResults!['entity'] as String?,
       );
     } else if (target.registration == null) {
-      ui.info('Next: `idrt enterprise register <host> [--zone fin]`.');
+      ui.info('Next: `idr enterprise register <host> [--zone fin]`.');
     } else if (admin) {
       await approveSelfIfPending(target, _plan);
     }
@@ -447,7 +447,7 @@ extension on _Setup {
         'You are a ${org.role} of ${org.name} with no zone yet.',
         hint:
             'Ask the organization owner (or a zone admin) to add you to a '
-            'zone: `idrt` > Organization > Invite people to zones. Then run '
+            'zone: `idr` > Organization > Invite people to zones. Then run '
             'this again.',
         code: 'NO_ZONE_ROLE',
       );
@@ -519,8 +519,8 @@ extension on _Setup {
       await _registerInZone(target, host, zone.zone, entityId: entityId);
     } else if (target.registration == null) {
       ui.info(
-        'Next: `idrt enterprise register <host>` (registers into zone '
-        '${zone.zone}), or pick it in `idrt`.',
+        'Next: `idr enterprise register <host>` (registers into zone '
+        '${zone.zone}), or pick it in `idr`.',
       );
     } else if (hasKey) {
       await approveSelfIfPending(target, _plan);
@@ -574,8 +574,8 @@ Future<void> _promoteToAdmin(IdrTarget target, CliOrg org) async {
       CliExit.usage,
       '${org.name} already has an admin machine.',
       hint:
-          'Approve this machine there: `idrt` > Pending approvals (or '
-          '`idrt enterprise pending`, then `idrt enterprise approve <id>`).',
+          'Approve this machine there: `idr` > Pending approvals (or '
+          '`idr enterprise pending`, then `idr enterprise approve <id>`).',
       code: 'ADMIN_EXISTS',
     );
   }
@@ -584,7 +584,7 @@ Future<void> _promoteToAdmin(IdrTarget target, CliOrg org) async {
   ui.info('This machine is now the admin machine for ${org.name}.');
 }
 
-/// `idrt enterprise register <host> [--zone fin.apac]`
+/// `idr enterprise register <host> [--zone fin.apac]`
 class _Register extends Command<int> {
   _Register() {
     argParser
@@ -623,7 +623,7 @@ class _Register extends Command<int> {
   });
 }
 
-/// `idrt enterprise org` — org, brand, zones, zone admins, devices.
+/// `idr enterprise org` — org, brand, zones, zone admins, devices.
 class _Org extends Command<int> {
   @override
   String get name => 'org';
@@ -695,7 +695,7 @@ class _Org extends Command<int> {
   ) {
     final ski = z.authoritySki;
     if (ski == null) {
-      return 'no certificate (`idrt enterprise zone add ${z.pathKey}` issues one)';
+      return 'no certificate (`idr enterprise zone add ${z.pathKey}` issues one)';
     }
     final issued = z.issuedAt?.toIso8601String().substring(0, 10) ?? '?';
     final billing = onBilling == null
@@ -710,7 +710,7 @@ class _Org extends Command<int> {
   }
 }
 
-/// `idrt enterprise zone policy <zone> --allow ollama[,lmstudio]`
+/// `idr enterprise zone policy <zone> --allow ollama[,lmstudio]`
 class _ZonePolicy extends Command<int> {
   _ZonePolicy() {
     argParser.addMultiOption(
@@ -774,7 +774,7 @@ class _ZonePolicy extends Command<int> {
   });
 }
 
-/// `idrt enterprise zone add|invite`
+/// `idr enterprise zone add|invite`
 class _Zone extends Command<int> {
   _Zone() {
     addSubcommand(_ZoneList());
@@ -819,7 +819,7 @@ class _ZoneAdd extends Command<int> {
       throw const CliError(
         CliExit.usage,
         'Only the root CA admin machine issues zone certificates '
-        '(`idrt enterprise setup --role admin --ca root`).',
+        '(`idr enterprise setup --role admin --ca root`).',
       );
     }
     final path = _zonePath(
@@ -870,7 +870,7 @@ class _ZoneAdd extends Command<int> {
     if (!ui.interactive) {
       ui.hint(
         'Next: choose its admin: '
-        '`idrt enterprise zone invite <email> --zone $key --role admin`.',
+        '`idr enterprise zone invite <email> --zone $key --role admin`.',
       );
       return CliExit.ok;
     }
@@ -937,7 +937,7 @@ Future<int> _requestSubzone(
         CliExit.auth,
         'The organization owner has not allowed sub-zones under $parent.',
         hint:
-            'Ask them to turn it on: `idrt enterprise zone settings $parent '
+            'Ask them to turn it on: `idr enterprise zone settings $parent '
             '--subzones` on the root machine.',
         code: 'SUBZONE_FORBIDDEN',
       );
@@ -948,7 +948,7 @@ Future<int> _requestSubzone(
   return CliExit.ok;
 }
 
-/// `idrt enterprise zone invite [<email>] [--zone a,b] [--role admin|member]`
+/// `idr enterprise zone invite [<email>] [--zone a,b] [--role admin|member]`
 /// Adds people to zones (billing). The first person in a zone becomes its
 /// admin; later ones are members. Not in the org yet: invited as a member.
 class _ZoneInvite extends Command<int> {
@@ -976,7 +976,7 @@ class _ZoneInvite extends Command<int> {
 
   @override
   String get invocation =>
-      'idrt enterprise zone invite <email> [--zone <zone>[,…]] [--role admin|member]';
+      'idr enterprise zone invite <email> [--zone <zone>[,…]] [--role admin|member]';
 
   @override
   Future<int> run() => withTarget((target) async {
@@ -1101,8 +1101,8 @@ Future<int> _addToZones(
       }
       ui.info('');
       ui.info('Tell them to run, on their machine:');
-      ui.info('  idrt login           (as $email)');
-      ui.info('  idrt enterprise setup --org ${org.slug}');
+      ui.info('  idr login           (as $email)');
+      ui.info('  idr enterprise setup --org ${org.slug}');
       ui.hint(
         'Setup finds their zone(s) and role by itself'
         '${results.any((r) => r['role'] == 'admin') ? '; as an admin they then ask you to sign their zone key (Pending approvals here)' : ''}.',
@@ -1128,7 +1128,7 @@ Future<List<String>> _pickManagedZones(IdrTarget target, CliOrg org) async {
           ? '${org.name} has no zones yet.'
           : 'You are not an admin of any zone.',
       hint: org.role == 'owner'
-          ? 'Create one first: `idrt enterprise zone add <name>`.'
+          ? 'Create one first: `idr enterprise zone add <name>`.'
           : 'The organization owner or a zone admin adds people.',
       code: 'NO_ZONES',
     );
@@ -1166,7 +1166,7 @@ CliError _zoneRoleError(StateError e, String zone) {
     return CliError(
       CliExit.usage,
       'Zone $zone does not exist.',
-      hint: 'See `idrt enterprise zone list`.',
+      hint: 'See `idr enterprise zone list`.',
       code: 'NO_SUCH_ZONE',
     );
   }
@@ -1194,7 +1194,7 @@ Future<String> _ensureInOrg(IdrTarget target, CliOrg org, String email) async {
   return 'invited';
 }
 
-/// `idrt enterprise zone settings <zone> [--members-approve] [--subzones]`
+/// `idr enterprise zone settings <zone> [--members-approve] [--subzones]`
 class _ZoneSettings extends Command<int> {
   _ZoneSettings() {
     argParser
@@ -1221,7 +1221,7 @@ class _ZoneSettings extends Command<int> {
 
   @override
   String get invocation =>
-      'idrt enterprise zone settings [<zone>] [--[no-]members-approve] '
+      'idr enterprise zone settings [<zone>] [--[no-]members-approve] '
       '[--[no-]subzones]';
 
   @override
@@ -1290,7 +1290,7 @@ class _ZoneSettings extends Command<int> {
   });
 }
 
-/// `idrt enterprise zone list`
+/// `idr enterprise zone list`
 class _ZoneList extends Command<int> {
   @override
   String get name => 'list';
@@ -1311,7 +1311,7 @@ class _ZoneList extends Command<int> {
           ui.info('No zones yet.');
           ui.hint(
             'Create one on the root CA admin machine: '
-            '`idrt enterprise zone add <name>`.',
+            '`idr enterprise zone add <name>`.',
           );
           return;
         }
@@ -1335,7 +1335,7 @@ class _ZoneList extends Command<int> {
   });
 }
 
-/// `idrt enterprise zone show [<zone>]`
+/// `idr enterprise zone show [<zone>]`
 class _ZoneShow extends Command<int> {
   @override
   String get name => 'show';
@@ -1359,7 +1359,7 @@ class _ZoneShow extends Command<int> {
       throw CliError(
         CliExit.usage,
         'Unknown zone $key.',
-        hint: 'See `idrt enterprise zone list`.',
+        hint: 'See `idr enterprise zone list`.',
         code: 'NO_SUCH_ZONE',
       );
     }
@@ -1374,7 +1374,7 @@ class _ZoneShow extends Command<int> {
           'name': z['name'] ?? '(issued from another admin machine)',
           'parent': z['parent'] ?? '(top level)',
           'certificate': z['certificate'] == null
-              ? 'none: `idrt enterprise zone add $key` issues one'
+              ? 'none: `idr enterprise zone add $key` issues one'
               : '${z['certificate']}, issued ${z['issuedAt'] ?? '?'}, '
                     '${_certText(z)}, key '
                     '${z['keyOnThisMachine'] == true ? 'on this machine' : 'elsewhere'}',
@@ -1405,7 +1405,7 @@ class _ZoneShow extends Command<int> {
   });
 }
 
-/// `idrt enterprise devices` — billing's record of issued credentials.
+/// `idr enterprise devices` — billing's record of issued credentials.
 class _Devices extends Command<int> {
   @override
   String get name => 'devices';
@@ -1429,7 +1429,7 @@ class _Devices extends Command<int> {
           'Billing lists devices only for the organization owner '
           '(you are ${org.role} of ${org.name}).',
           hint:
-              'Ask an owner, or `idrt enterprise members role <email> admin`.',
+              'Ask an owner, or `idr enterprise members role <email> admin`.',
           code: 'FORBIDDEN',
         );
       }
@@ -1438,7 +1438,7 @@ class _Devices extends Command<int> {
           CliExit.failure,
           '${org.name} has no machines registered with billing yet.',
           hint:
-              'Finish setup on the admin machine (`idrt enterprise '
+              'Finish setup on the admin machine (`idr enterprise '
               'setup --org ${org.slug} --role admin`); approved devices '
               'appear here.',
           code: 'NOT_REGISTERED',
@@ -1467,14 +1467,14 @@ class _Devices extends Command<int> {
               ],
           ],
         );
-        ui.hint('Revoke one: `idrt enterprise revoke <ski>`.');
+        ui.hint('Revoke one: `idr enterprise revoke <ski>`.');
       },
     );
     return CliExit.ok;
   });
 }
 
-/// `idrt enterprise members [invite|role|remove …]` — no browser.
+/// `idr enterprise members [invite|role|remove …]` — no browser.
 /// One command so a bare `members` lists (args would print usage if we nested).
 class _Members extends Command<int> {
   _Members() {
@@ -1494,7 +1494,7 @@ class _Members extends Command<int> {
 
   @override
   String get invocation =>
-      'idrt enterprise members [invite <email>|role <email> <role>|remove <email>]';
+      'idr enterprise members [invite <email>|role <email> <role>|remove <email>]';
 
   @override
   Future<int> run() => withTarget((target) async {
@@ -1559,7 +1559,7 @@ class _Members extends Command<int> {
           );
         }
         ui.hint(
-          'Invite: `idrt enterprise members invite <email> [--role member]`.',
+          'Invite: `idr enterprise members invite <email> [--role member]`.',
         );
       },
     );
@@ -1580,8 +1580,8 @@ class _Members extends Command<int> {
     ui.hint(
       role == 'admin'
           ? 'An org admin manages the whole organization. To give someone '
-                'one zone only, use `idrt enterprise zone invite $email`.'
-          : 'Give them a zone: `idrt enterprise zone invite $email`.',
+                'one zone only, use `idr enterprise zone invite $email`.'
+          : 'Give them a zone: `idr enterprise zone invite $email`.',
     );
     return CliExit.ok;
   }
@@ -1677,8 +1677,8 @@ Future<void> _explainPendingInvite(IdrTarget target, String email) async {
   }
 }
 
-/// `idrt enterprise revoke <ski|zone> [--reason r]`
-/// `idrt enterprise block <source> [--target <fqhn>] [--undo]`
+/// `idr enterprise revoke <ski|zone> [--reason r]`
+/// `idr enterprise block <source> [--target <fqhn>] [--undo]`
 class _Block extends Command<int> {
   _Block() {
     argParser
@@ -1696,7 +1696,7 @@ class _Block extends Command<int> {
 
   @override
   String get invocation =>
-      'idrt enterprise block <source> [--target <fqhn>] [--undo]';
+      'idr enterprise block <source> [--target <fqhn>] [--undo]';
 
   @override
   Future<int> run() => withTarget((target) async {
@@ -1751,7 +1751,7 @@ class _Revoke extends Command<int> {
       '(member, Target). Org owner only.';
 
   @override
-  String get invocation => 'idrt enterprise revoke <ski|zone> [--reason r]';
+  String get invocation => 'idr enterprise revoke <ski|zone> [--reason r]';
 
   @override
   Future<int> run() => withTarget((target) async {

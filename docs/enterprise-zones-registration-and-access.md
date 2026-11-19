@@ -1,10 +1,10 @@
 # Enterprise zones, registration, and service access
 
-**Status:** living spec. Org users/roles/invites in `idrt` (no browser) added 2026-10-26.
+**Status:** living spec. Org users/roles/invites in `idr` (no browser) added 2026-10-26.
 
 This document records **desired** Enterprise behavior, **current** implementation (with file evidence), existing tests that were run, gaps, and a prioritized fix list. Wait for approval before implementing.
 
-Related user docs: [idrt Enterprise](../idr_target_cli/README.md#registration-enterprise), [idr Enterprise](../idr_sources_cli/README.md#registration-enterprise).
+Related user docs: [idr Enterprise](../idr_target_cli/README.md#registration-enterprise), [idrs Enterprise](../idr_sources_cli/README.md#registration-enterprise).
 
 ---
 
@@ -16,7 +16,7 @@ Related user docs: [idrt Enterprise](../idr_target_cli/README.md#registration-en
 | Entity FQHN | e.g. `acme.idr.to` | Entity is **not** a Presence Target. Connectable names are machines: `{host}--{entity}.idr.to`. |
 | Zone FQHN | e.g. `fin.acme.idr.to` | Zone is a **path key** (`fin`, `fin.apac`) + zone CA. Not registered with Presence. |
 | Zone admin | Holds zone CA; reviews/signs CSRs for that zone | **Implemented (2026-10-27).** `zone invite` sets the role on billing; the zone admin's machine holds its own root-signed zone key and approves only its zone. |
-| Source zone selection | Path A (no zone → root inbox) and Path B (pick zone → zone admin) | Both: no `--zone` → owner's inbox, zone picked at approve; `idr enroll --zone fin` → fin's admins (and owner). |
+| Source zone selection | Path A (no zone → root inbox) and Path B (pick zone → zone admin) | Both: no `--zone` → owner's inbox, zone picked at approve; `idrs enroll --zone fin` → fin's admins (and owner). |
 | Host uniqueness | Unique **per zone** | Unique **per entity** (`machine_seats` `entity_id` + `host`). |
 | Machine FQHN | Distinct per zone so `gpu-box` can repeat | Live: `{label}--{entityId}.idr.to` with `entityId` usually email. Zone not in the name. |
 
@@ -46,12 +46,12 @@ Constraints that any option must satisfy:
 
 | Step | Command / API | What happens |
 |---|---|---|
-| Bind org | `idrt enterprise setup --org acme --role admin` | Billing org slug `acme`; not `entityId`. |
+| Bind org | `idr enterprise setup --org acme --role admin` | Billing org slug `acme`; not `entityId`. |
 | CA | `ensureAdminCa(package: enterprise)` | `entityId` = `session.email` (`idr_target.dart` `ensureAdminCa`). |
 | Kickstart | `POST .../kickstart-entity` | Registers Machine AuthN with that `entityId`. 409 if entity exists. |
 | Named entity | — | **No CLI flag.** Passing a custom `entityId` into kickstart is possible at the HTTP layer if the caller is owner and the name is free. **Not proven unique vs email collisions** beyond DB unique. |
 | Brand | `--brand` | Local org-graph display (`EnterpriseOrgManager`). Not `dpEntityId`. |
-| Domain verify | `idrt provider domain *` | Custom **Target alias**, Service Provider. Does not claim entity name. |
+| Domain verify | `idr provider domain *` | Custom **Target alias**, Service Provider. Does not claim entity name. |
 
 **Safe to support both later?** Yes if: (1) owner-only kickstart stays, (2) `dp_entity_id` unique, (3) named entity is DNS-safe for Presence (`acme.com` OK; spaces not), (4) hosts `assertEntityOwned` includes named `dpEntityId` (already does), (5) Sources enroll against `{host}--{namedEntity}` not the admin email. **Not safe today** to treat `acme.idr.to` as a connectable Target — nothing registers it.
 
@@ -73,7 +73,7 @@ Constraints that any option must satisfy:
 |---|---|---|
 | `zone add` | Root CA admin machine only (`enterpriseCaRole == root`) | `idrt/lib/modes/enterprise.dart` `_ZoneAdd` |
 | Issue zone CA | Same machine; keys in `auth.json` | `EnrollmentManager.issueZoneAuthority` |
-| `zone policy` | Root admin machine | `idrt` README; re-signs zone credential |
+| `zone policy` | Root admin machine | `idr` README; re-signs zone credential |
 | `zone invite <path> <email>` | Admin machine; **local list** | `EnterpriseOrgManager.inviteZoneAdmin`; `remoteSyncAvailable => false` |
 | `approve --zone fin` | **Same root machine** (loads `loadZoneCa`) | `EnrollmentManager.approve` |
 | Portal owner/admin/member | Org roles | Members enroll Sources; owners/admins register Targets / billing |
@@ -82,20 +82,20 @@ Constraints that any option must satisfy:
 
 **Desired / required for the first in-app implementation:**
 
-- Entity `acme.idr.to` is **not** a Presence Target. Creating the entity (setup + CA) does **not** connect any machine to Presence. Only `idrt enterprise register <host>` → `{host}--{entity}.idr.to` plus `idrt start` registers that box as a Target.
-- Root admin **views and manages org users and roles inside `idrt`**. Billing still stores membership; the CLI calls Better Auth (`list-members` / `invite-member` / `update-member-role` / `remove-member`) with the existing session cookie (same APIs as the portal).
-- Root admin **invites by email from the CLI**. No browser, no portal handoff. Invitee still signs in (email from billing) and can `idr enroll`; they do not need the admin to open `/members`.
-- `idrt enterprise members` **must not** open the billing portal. Checkout / `idrt billing` may still open a browser (already implemented; that stays).
+- Entity `acme.idr.to` is **not** a Presence Target. Creating the entity (setup + CA) does **not** connect any machine to Presence. Only `idr enterprise register <host>` → `{host}--{entity}.idr.to` plus `idr start` registers that box as a Target.
+- Root admin **views and manages org users and roles inside `idr`**. Billing still stores membership; the CLI calls Better Auth (`list-members` / `invite-member` / `update-member-role` / `remove-member`) with the existing session cookie (same APIs as the portal).
+- Root admin **invites by email from the CLI**. No browser, no portal handoff. Invitee still signs in (email from billing) and can `idrs enroll`; they do not need the admin to open `/members`.
+- `idr enterprise members` **must not** open the billing portal. Checkout / `idr billing` may still open a browser (already implemented; that stays).
 - Roles: `owner` (org creator, not assigned via invite), `admin`, `member`. Invite and role-change offer `admin` | `member` only (same as the portal).
 - Owners and org admins may invite / change role / remove. Members may list if billing allows; otherwise the CLI prints the server error.
 
 **Commands:**
 
 ```text
-idrt enterprise members
-idrt enterprise members invite <email> [--role member|admin]
-idrt enterprise members role <email> <admin|member>
-idrt enterprise members remove <email>
+idr enterprise members
+idr enterprise members invite <email> [--role member|admin]
+idr enterprise members role <email> <admin|member>
+idr enterprise members remove <email>
 ```
 
 `zone invite` remains zone-admin **label** on this machine (CA still local). Org membership is the billing invite above.
@@ -122,9 +122,9 @@ idrt enterprise members remove <email>
 
 ### Current (single path)
 
-1. `idr enroll <target-fqhn> [--org slug] [--label host]`
+1. `idrs enroll <target-fqhn> [--org slug] [--label host]`
 2. `SourceIdentityManager.enroll`: `entityId` from Target FQHN; `host = {label}--{entityId}`; `kind=machine_source`; **no zone field**.
-3. Pending until `idrt enterprise approve <id> [--zone key]`.
+3. Pending until `idr enterprise approve <id> [--zone key]`.
 4. Without `--zone`: root CA signs; `sessionPolicy` issuer is not `zone_authority` → `zone=null`, `allowedServices` defaults toward `*`.
 5. With `--zone`: zone CA signs; chain leaf→zone→root; policy from zone credential.
 
@@ -172,7 +172,7 @@ Keep Presence grammar `{left}--{entity}.idr.to` (do not use a single hyphen as t
 
 - Target: `{hostLabel}--{entityId}.idr.to` (`hosts.routes.ts`). `hostLabel` regex: **no dots**.
 - Source: `{sanitizedLabel}--{entity}` (`source_identity_manager.dart`).
-- GUI helper `EnterpriseFqhn.build`: `{host}.{zone...}--{brand}.idr.to` — **not** used by `idrt register` / Presence.
+- GUI helper `EnterpriseFqhn.build`: `{host}.{zone...}--{brand}.idr.to` — **not** used by `idr register` / Presence.
 - Seats: `isActiveHostTaken(entityId, [hostLabel, verifiedFqhn])` — **entity-wide**.
 
 ### Routing / TLS / DNS (current)
@@ -191,20 +191,20 @@ Keep Presence grammar `{left}--{entity}.idr.to` (do not use a single hyphen as t
 ### Planned commands (desired / current CLI)
 
 ```text
-idrt login
-idrt enterprise setup --org <slug> --role admin --ca root
-# entityId today = login email; named entity not in CLI
-idrt enterprise register gpu-box
-idrt enterprise approve <id>          # self-approve Target if admin machine
-idrt services add ollama http://127.0.0.1:11434
-idrt start
-# Source:
 idr login
-idr enroll gpu-box--<entity> --org <slug> --label alice-laptop
-idrt enterprise approve <source-id>   # no --zone
-idr enroll
-idr connect gpu-box--<entity>
-idr active ollama
+idr enterprise setup --org <slug> --role admin --ca root
+# entityId today = login email; named entity not in CLI
+idr enterprise register gpu-box
+idr enterprise approve <id>          # self-approve Target if admin machine
+idr services add ollama http://127.0.0.1:11434
+idr start
+# Source:
+idrs login
+idrs enroll gpu-box--<entity> --org <slug> --label alice-laptop
+idr enterprise approve <source-id>   # no --zone
+idrs enroll
+idrs connect gpu-box--<entity>
+idrs active ollama
 ```
 
 ### Expected
@@ -215,7 +215,7 @@ Target online; Source mTLS/proof; session-policy allow; Ollama listed and usable
 
 **Not executed.** Missing live Billing, portal, Presence, paid Enterprise org, running Ollama, and two enrolled machines.
 
-Closest passing units: Source enroll mock (`source_identity_manager_test.dart`); session-policy (`machine-authn-session-policy.test.ts`); `idrt` CLI smoke (`cli_test.dart`).
+Closest passing units: Source enroll mock (`source_identity_manager_test.dart`); session-policy (`machine-authn-session-policy.test.ts`); `idr` CLI smoke (`cli_test.dart`).
 
 ---
 
@@ -224,13 +224,13 @@ Closest passing units: Source enroll mock (`source_identity_manager_test.dart`);
 ### Planned (desired)
 
 ```text
-idrt enterprise zone add fin
-idrt enterprise zone invite fin zone-admin@acme.com
+idr enterprise zone add fin
+idr enterprise zone invite fin zone-admin@acme.com
 # zone admin on another machine: obtain zone CA — NOT IMPLEMENTED
-idrt services add ollama … && idrt start   # Target in zone or serving all zones
-# Path A: idr enroll … (no zone); root approve; later assign zone — assign not implemented
-# Path B: idr enroll … --zone fin — flag not implemented
-idrt enterprise approve <id> --zone fin     # current Path-B substitute: root signs as zone
+idr services add ollama … && idr start   # Target in zone or serving all zones
+# Path A: idrs enroll … (no zone); root approve; later assign zone — assign not implemented
+# Path B: idrs enroll … --zone fin — flag not implemented
+idr enterprise approve <id> --zone fin     # current Path-B substitute: root signs as zone
 ```
 
 ### Expected vs actual
@@ -278,7 +278,7 @@ idrt enterprise approve <id> --zone fin     # current Path-B substitute: root si
 | Host uniqueness | `machine-seat.repository.ts` `isActiveHostTaken` | gap for zone-scope |
 | Session policy | `session-policy.service.ts`; Presence `session_policy.rs` | `machine-authn-session-policy.test.ts` |
 | FQHN parse | `fqhn.rs`; `names.ts` `parseMachineHost`; `entityIdFromFqhn` | `names.test.ts`; Presence fqhn tests (not re-run cargo here) |
-| CLI surface | `idrt` enterprise commands; `idr` enroll | `apps/idr_target_cli/test/cli_test.dart`, `apps/idr_sources_cli/test/cli_test.dart` |
+| CLI surface | `idr` enterprise commands; `idrs` enroll | `apps/idr_target_cli/test/cli_test.dart`, `apps/idr_sources_cli/test/cli_test.dart` |
 | Zone member listing | `zoneMembers` | `apps/idr_target_cli/test/zone_members_test.dart` |
 
 ---
@@ -288,12 +288,12 @@ idrt enterprise approve <id> --zone fin     # current Path-B substitute: root si
 | Suite | Command | Result |
 |---|---|---|
 | Source identity | `applications/apps/sdks/idr_source`: `dart test test/source_identity_manager_test.dart test/bind_organization_test.dart` | **5 passed** |
-| idrt CLI + zone members | `applications/apps/idr_target_cli`: `dart test test/zone_members_test.dart test/cli_test.dart` | **9 passed** |
-| idr CLI | `applications/apps/idr_sources_cli`: `dart test test/cli_test.dart` | **8 passed** |
+| idr CLI + zone members | `applications/apps/idr_target_cli`: `dart test test/zone_members_test.dart test/cli_test.dart` | **9 passed** |
+| idrs CLI | `applications/apps/idr_sources_cli`: `dart test test/cli_test.dart` | **8 passed** |
 | Target zone/kickstart | `applications/apps/sdks/idr_target`: `dart test` **failed to load** (`dart:ui` / Flutter). `flutter test test/zone_authority_test.dart test/kickstart_test.dart` | **10 passed** |
 | Billing session-policy + credential list | `Auth_repo/billing`: vitest those two files | **12 passed** (2 files) |
 | `parseMachineHost` | `Auth_repo/better-auth`: `names.test.ts` | **3 passed** |
-| Scenario A/B E2E | live `idrt`/`idr` + Ollama + Presence | **Not run** — no local billing/Presence/Ollama/org in this session |
+| Scenario A/B E2E | live `idr`/`idrs` + Ollama + Presence | **Not run** — no local billing/Presence/Ollama/org in this session |
 | Presence `cargo test` fqhn | — | **Not run** |
 | Full billing / enroll HTTP suites | — | **Not run** (subset only) |
 
@@ -306,7 +306,7 @@ idrt enterprise approve <id> --zone fin     # current Path-B substitute: root si
 1. Named entity (brand/domain) as a **supported** setup option with uniqueness UX.
 2. Entity/zone as Presence FQHNs (`acme.idr.to`, `fin.acme.idr.to`).
 3. ~~Zone admin as a **signing** principal~~ Done 2026-10-27: the zone admin's machine makes its own zone key; the root signs it from Pending approvals (`zone_authority` enroll). Zone roles (admin/member) and settings (`membersApprove`, `adminsCreateSubzones`) live on billing (zone record metadata). See `docs/e2e-multi-user-cli.md` TC5.
-4. ~~Source `--zone` / Path B inbox routing~~ Done 2026-10-27: `idr enroll --zone`; the request goes to that zone's admins (and the owner).
+4. ~~Source `--zone` / Path B inbox routing~~ Done 2026-10-27: `idrs enroll --zone`; the request goes to that zone's admins (and the owner).
 5. Post-approve **move** to a zone (Path A step 4).
 6. Host uniqueness **per zone**; dotted `{label}.{zone}--{entity}` as the live `hostLabel`.
 7. Domain/brand **ownership** verification for entity names.
@@ -317,7 +317,7 @@ idrt enterprise approve <id> --zone fin     # current Path-B substitute: root si
 ## 11. Prioritized proposed fixes (do not start without approval)
 
 1. **Docs/CLI honesty** — Describe live FQHN and “zone at approve only.” Tests: existing CLI/README; no new product behavior. *Low risk.*
-2. **Named `entityId` on enterprise setup** (optional flag) — persist as `dpEntityId`; FQHNs `{host}--{name}.idr.to`. Tests: kickstart uniqueness, `assertEntityOwned`, `entityIdFromFqhn`. *Defer DNS proof.* Components: `ensureAdminCa`, kickstart, `idrt enterprise setup`.
+2. **Named `entityId` on enterprise setup** (optional flag) — persist as `dpEntityId`; FQHNs `{host}--{name}.idr.to`. Tests: kickstart uniqueness, `assertEntityOwned`, `entityIdFromFqhn`. *Defer DNS proof.* Components: `ensureAdminCa`, kickstart, `idr enterprise setup`.
 3. **Zone in Source enroll metadata** (still signed on root box) — `enroll-create` `zone` hint for inbox filter. Tests: pending list filtered. *Does not yet move CA.*
 4. **Live host = `{label}` at root, `{label}.{zonePath}--{entity}` in zone** + seat uniqueness on full host. Tests: two zones same `gpu-box`; duplicate in one zone rejected; Presence canonicalize dotted path; Source enroll matches. Components: `hosts.routes.ts` hostLabel regex, `registerHost`, `SourceIdentityManager`, seats.
 5. **Zone-admin machine** — export/issue `zone_authority` to invited admin; `approve` authorized by zone SKI scope. Tests: cannot approve other zone; CSR signed by zone CA. Components: `invite`, `issue-delegate`, `EnrollmentManager.approve`.
@@ -330,13 +330,13 @@ After each fix, the corresponding rows in §7 should move from Gap to Pass.
 
 ## 12. Org members in CLI
 
-Implemented in-app: `idrt enterprise members` talks to Better Auth over the session cookie. Portal `/members` is unused by this command.
+Implemented in-app: `idr enterprise members` talks to Better Auth over the session cookie. Portal `/members` is unused by this command.
 
 ---
 
 ## 13. Live CLI validation (2026-10-26)
 
-Run against local Billing (`127.0.0.1:3000`, org `acme`, owner session) with `dart run bin/idrt.dart` / `bin/idr.dart`. Presence (`:8081`) was **not running**, so `idr connect` / `idr active` / `idrt start` were not exercised.
+Run against local Billing (`127.0.0.1:3000`, org `acme`, owner session) with `dart run bin/idr.dart` / `bin/idrs.dart`. Presence (`:8081`) was **not running**, so `idrs connect` / `idrs active` / `idr start` were not exercised.
 
 | Workflow | Result |
 |---|---|
@@ -346,7 +346,7 @@ Run against local Billing (`127.0.0.1:3000`, org `acme`, owner session) with `da
 | `members role/remove` on an accepted member | Not run against real accounts (only real users were members). |
 | `zone add legal`, `legal.emea`; bad label; missing parent | Pass |
 | `zone invite`, `zone policy --allow ollama`, `zone show` | Pass (invite is a local label, as documented) |
-| `idr enroll … --org acme --label qa-src-1` → pending → `approve --zone nosuch` (refused) → `approve --zone legal` → `idr enroll` approved | Pass |
+| `idrs enroll … --org acme --label qa-src-1` → pending → `approve --zone nosuch` (refused) → `approve --zone legal` → `idrs enroll` approved | Pass |
 | `enroll` bad FQHN | Exit was 3 (connect); now 64 (usage) |
 | `enroll --org nosuchorg`; `reject` then re-enroll (`ENROLLMENT_REJECTED`) | Pass |
 | `revoke <ski>` / `revoke <zone>` / unknown | Pass |

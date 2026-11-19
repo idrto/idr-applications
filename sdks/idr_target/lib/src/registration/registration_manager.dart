@@ -99,7 +99,7 @@ class RegistrationManager {
       throw IdrTargetException(
         code: IdrTargetErrorCode.hostRejected,
         message: 'Entity $entityId does not exist. The organization owner '
-            'must run `idrt enterprise setup --role admin` first.',
+            'must run `idr enterprise setup --role admin` first.',
       );
     }
 

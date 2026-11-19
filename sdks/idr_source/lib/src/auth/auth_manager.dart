@@ -90,7 +90,7 @@ class AuthManager {
     if (session == null) {
       throw const IdrSourceException(
         code: 'AUTH_REQUIRED',
-        message: 'Session expired. Sign in again (idr login --force).',
+        message: 'Session expired. Sign in again (idrs login --force).',
       );
     }
     return (session: session, slug: org.slug, name: org.name, role: org.role);

@@ -30,12 +30,12 @@ class ActiveCommand extends Command<int> {
 
   @override
   String get invocation =>
-      'idr active [<service>] [--model <id>] [--prompt "<text>"]';
+      'idrs active [<service>] [--model <id>] [--prompt "<text>"]';
 
   @override
   String get usageFooter => '\nExamples:\n'
-      '  idr active ollama\n'
-      '  idr active ollama --model gemma3:1b --prompt "Reply with: pong"';
+      '  idrs active ollama\n'
+      '  idrs active ollama --model gemma3:1b --prompt "Reply with: pong"';
 
   @override
   Future<int> run() => withSource((source) async {

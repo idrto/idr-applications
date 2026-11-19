@@ -109,8 +109,8 @@ Future<IdrBusinessPlan> _planFromArgs(IdrTarget target, String? flag) async {
       'No mode chosen yet.',
       hint:
           'Run setup first; it opens checkout when needed: '
-          '`idrt enterprise setup --org <slug> --role admin` '
-          '(or `idrt personal setup` / `idrt provider setup`).',
+          '`idr enterprise setup --org <slug> --role admin` '
+          '(or `idr personal setup` / `idr provider setup`).',
       code: 'MODE_REQUIRED',
     );
   }
@@ -121,7 +121,7 @@ Future<IdrBusinessPlan> _planFromArgs(IdrTarget target, String? flag) async {
       'This machine is not bound to an organization, so there is no '
       'Enterprise subscription to buy or show.',
       hint:
-          'Run `idrt enterprise setup --org <slug> --role admin`; it opens '
+          'Run `idr enterprise setup --org <slug> --role admin`; it opens '
           'checkout for that org.',
       code: 'ORG_REQUIRED',
     );
@@ -143,7 +143,7 @@ void _addBillingFlags(Command<int> c) {
     );
 }
 
-/// `idrt billing` — subscription state, then the portal's manage page.
+/// `idr billing` — subscription state, then the portal's manage page.
 class BillingCommand extends Command<int> {
   BillingCommand() {
     _addBillingFlags(this);
@@ -198,7 +198,7 @@ class BillingCommand extends Command<int> {
   });
 }
 
-/// `idrt subscribe` — straight to checkout for the mode's plan.
+/// `idr subscribe` — straight to checkout for the mode's plan.
 class SubscribeCommand extends Command<int> {
   SubscribeCommand() {
     _addBillingFlags(this);
@@ -223,7 +223,7 @@ class SubscribeCommand extends Command<int> {
       portalPaths(plan).subscribe,
       open: argResults!['open'] as bool,
     );
-    ui.info('After checkout, run `idrt billing --status`.');
+    ui.info('After checkout, run `idr billing --status`.');
     return CliExit.ok;
   });
 }

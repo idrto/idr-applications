@@ -52,4 +52,4 @@ Native library: `config.libraryPath`, else env, else walk-up to `agents_engine/a
 
 ## CLI
 
-See [`idr_sources_cli`](../../idr_sources_cli) for the `idr` command-line tool built on this SDK.
+See [`idr_sources_cli`](../../idr_sources_cli) for the `idrs` command-line tool built on this SDK.

@@ -63,7 +63,7 @@ abstract final class IdrTargetErrors {
             : fallbackCode,
         message: 'Only the organization owner can set up the Enterprise '
             'entity, and this account is not the owner. Join the owner entity: '
-            '`idrt enterprise register <host> --entity <owner-email>`. ($error)',
+            '`idr enterprise register <host> --entity <owner-email>`. ($error)',
       );
     }
 
@@ -71,7 +71,7 @@ abstract final class IdrTargetErrors {
       return IdrTargetAttention(
         code: fallbackCode,
         message: 'The organization entity is not available to this account. '
-            'The owner must finish `idrt enterprise setup --role admin` first. '
+            'The owner must finish `idr enterprise setup --role admin` first. '
             '($error)',
       );
     }

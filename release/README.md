@@ -10,7 +10,7 @@ updates never rebuild the apps.
 
 ```
 build / target-app / setup-windows jobs ──▶ publish job (ubuntu)
-  idr, idrt, Target GUI, IDR-Setup.exe        package.py → packages + manifest.{json,tsv}
+  idrs, idr, Target GUI, IDR-Setup.exe        package.py → packages + manifest.{json,tsv}
   (also kept as Actions artifacts)            openssl sign (IDR_RELEASE_SIGNING_KEY)
                                               gh release create staging-<version>
                                               scp + vm-publish.sh (SERVER_1_*) ──▶ VM /opt/idr-downloads
@@ -25,8 +25,8 @@ put every component in one folder and a shared dependency is installed once.
 | Component | Platforms | Requires | Contents |
 |---|---|---|---|
 | `target-gui` | windows-x64 | `target-agent` | Target GUI (Flutter bundle) |
-| `target-cli` | windows-x64, linux-x64, macos-arm64 | `target-agent` | `idrt`, `config/prod.json` |
-| `source-cli` | windows-x64, linux-x64, macos-arm64 | none | `idr`, `idr_c_api`, `source-agent`, `config/prod.json` |
+| `target-cli` | windows-x64, linux-x64, macos-arm64 | `target-agent` | `idr`, `config/prod.json` |
+| `source-cli` | windows-x64, linux-x64, macos-arm64 | none | `idrs`, `idr_c_api`, `source-agent`, `config/prod.json` |
 | `target-agent` | all three | none | `target-agent` |
 
 macOS builds are opt-in: set the repository variable `BUILD_MACOS` to `true`
@@ -34,7 +34,7 @@ macOS builds are opt-in: set the repository variable `BUILD_MACOS` to `true`
 macOS runner minutes. Without it the release has Windows and Linux only, and the
 website shows macOS as not available yet. Every app package also carries what the agent repo's `e2e binaries` workflow
 ships beside the agents in `e2e-agent-binaries.zip`: `idr_dp` (machine keys and
-certificates, needed by `idrt` registration and `idr enroll`) and, on Windows, the
+certificates, needed by `idr` registration and `idrs enroll`) and, on Windows, the
 OpenSSL DLLs the agents were linked against plus the Visual C++ runtime.
 There is no Source GUI yet; the website shows it as not available. Standalone
 downloads (`packages/<v>/standalone/`) are the same apps with the agent inside, for
@@ -45,7 +45,7 @@ people who don't use Setup.
 | OS | File | What it is |
 |---|---|---|
 | Windows | `IDR-Setup.exe` | Inno Setup wizard ([idr-setup.iss](installer/windows/idr-setup.iss)): component page, download page with SHA-256 checks, per-user install in `%LOCALAPPDATA%\Programs\IDR` (no admin), Start menu / desktop shortcut for the GUI, user `PATH`, uninstaller. The work is done by [idr-install.ps1](installer/windows/idr-install.ps1), which also runs alone (`-Mode Install -Components target-cli`). |
-| Linux, macOS | `idr-setup.sh` | POSIX `sh` script ([idr-setup.sh](installer/unix/idr-setup.sh)): numbered menu or `--components`, installs to `~/.local/share/idr`, links `idr`/`idrt` into `~/.local/bin`, `--uninstall`. Needs `curl`, `tar`, `openssl`. |
+| Linux, macOS | `idr-setup.sh` | POSIX `sh` script ([idr-setup.sh](installer/unix/idr-setup.sh)): numbered menu or `--components`, installs to `~/.local/share/idr`, links `idrs`/`idr` into `~/.local/bin`, `--uninstall`. Needs `curl`, `tar`, `openssl`. |
 
 Both fetch the channel's manifest, check its RSA signature against the public key
 built into them ([release-key.pem](release-key.pem)), add the required dependencies,

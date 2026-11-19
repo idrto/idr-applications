@@ -51,8 +51,8 @@ class LoginCommand extends Command<int> {
           ui.success('Signed in as ${session.email}.');
           // In a terminal the home menu follows instead.
           if (currentPlan(target) == null && !ui.interactive) {
-            ui.hint('Next: `idrt personal setup`, `idrt enterprise setup '
-                '--org <slug>` or `idrt provider setup --org <slug>`.');
+            ui.hint('Next: `idr personal setup`, `idr enterprise setup '
+                '--org <slug>` or `idr provider setup --org <slug>`.');
           }
         });
         return CliExit.ok;
@@ -139,7 +139,7 @@ class StatusCommand extends Command<int> {
       });
 }
 
-/// `idrt start` — run target-agent in the foreground until Ctrl+C.
+/// `idr start` — run target-agent in the foreground until Ctrl+C.
 class StartCommand extends Command<int> {
   @override
   String get name => 'start';
@@ -160,7 +160,7 @@ class StartCommand extends Command<int> {
         throw const CliError(
           CliExit.usage,
           'No mode chosen yet.',
-          hint: 'Run `idrt personal setup` (or enterprise / provider setup).',
+          hint: 'Run `idr personal setup` (or enterprise / provider setup).',
           code: 'MODE_REQUIRED',
         );
       }
@@ -176,7 +176,7 @@ class StartCommand extends Command<int> {
           if (a == null) return;
           ui.warn('${a.code.wire}: ${a.message}');
           if (billingAttentionCodes.contains(a.code)) {
-            ui.hint('Run `idrt billing` to fix your subscription.');
+            ui.hint('Run `idr billing` to fix your subscription.');
           }
         }));
 
@@ -191,7 +191,7 @@ class StartCommand extends Command<int> {
               : CliExit.failure,
           'target-agent did not start (${target.status.name})'
           '${target.attention == null ? '' : ': ${target.attention!.message}'}',
-          hint: 'Run `idrt doctor`; add --verbose for the SDK log.',
+          hint: 'Run `idr doctor`; add --verbose for the SDK log.',
           code: code?.wire ?? 'AGENT_START_FAILED',
         );
       }
@@ -212,7 +212,7 @@ class StartCommand extends Command<int> {
           'agent': summary['agent'],
           'presence': summary['presence'],
           'services': target.services.isEmpty
-              ? '(none: `idrt services add <name> <url>`)'
+              ? '(none: `idr services add <name> <url>`)'
               : target.services.map((s) => s.name).join(', '),
         });
         ui.hint('Ctrl+C to stop.');
@@ -263,7 +263,7 @@ class _ServicesList extends Command<int> {
           ],
           human: () {
             if (target.services.isEmpty) {
-              ui.info('No services. Add one with `idrt services add`.');
+              ui.info('No services. Add one with `idr services add`.');
               return;
             }
             ui.table(['name', 'type', 'endpoint', 'enabled'], [
@@ -291,12 +291,12 @@ class _ServicesAdd extends Command<int> {
   String get description => 'Add a service: add <name> <endpoint>.';
 
   @override
-  String get invocation => 'idrt services add <name> <endpoint> [--type tcp]';
+  String get invocation => 'idr services add <name> <endpoint> [--type tcp]';
 
   @override
   String get usageFooter => '\nExamples:\n'
-      '  idrt services add ollama http://127.0.0.1:11434\n'
-      '  idrt services add lmstudio http://127.0.0.1:1234';
+      '  idr services add ollama http://127.0.0.1:11434\n'
+      '  idr services add lmstudio http://127.0.0.1:1234';
 
   @override
   Future<int> run() => withTarget((target) async {
@@ -316,7 +316,7 @@ class _ServicesAdd extends Command<int> {
         if (error != null) throw CliError(CliExit.usage, error);
         ui.result({'added': name, 'endpoint': endpoint}, human: () {
           ui.success('Added $name.');
-          ui.hint('Restart `idrt start` to publish it.');
+          ui.hint('Restart `idr start` to publish it.');
         });
         return CliExit.ok;
       });

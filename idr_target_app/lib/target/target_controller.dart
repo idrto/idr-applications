@@ -32,7 +32,7 @@ String describeError(Object e) {
 ///
 /// All business operations (auth, registration, enrollment, CA, billing,
 /// services, domains, agent) are SDK calls. This class only sequences them the
-/// way the tested `idrt` CLI does (`personal|enterprise|provider setup`,
+/// way the tested `idr` CLI does (`personal|enterprise|provider setup`,
 /// `register`, `approve`, `domain`, `start`), keeps the few settings the CLI
 /// keeps outside the SDK (bound org, provider tenants) and exposes busy/error
 /// state to widgets.
@@ -47,7 +47,7 @@ class TargetController extends ChangeNotifier {
 
   final SessionStore store;
 
-  /// [store] is the machine's Target store, shared with `idrt`.
+  /// [store] is the machine's Target store, shared with `idr`.
   final bool _sharedStore;
   final IdrTarget? _injected;
   late final IdrTarget target;
@@ -104,7 +104,7 @@ class TargetController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// `idrt login` / `logout` / `register` change the shared store under us:
+  /// `idr login` / `logout` / `register` change the shared store under us:
   /// reload when the account or registration there differs from ours.
   void _watchSharedStore() {
     final dir = targetStoreFile.parent..createSync(recursive: true);
@@ -221,7 +221,7 @@ class TargetController extends ChangeNotifier {
     await loadLoginOptions(force: true);
   });
 
-  // --- Mode setup (idrt personal|enterprise|provider setup) --------------------
+  // --- Mode setup (idr personal|enterprise|provider setup) --------------------
 
   Future<void> _saveOrg(TargetOrg o) async {
     org = o;
@@ -324,7 +324,7 @@ class TargetController extends ChangeNotifier {
       await _clearOrg();
       throw StateError(
         'You are a ${bound.role} of ${bound.name}. Registering a machine needs '
-        'owner or admin. Ask an owner to change your role, or use `idrt` for '
+        'owner or admin. Ask an owner to change your role, or use `idr` for '
         'zone-only members.',
       );
     }
@@ -489,7 +489,7 @@ class TargetController extends ChangeNotifier {
     if (covered) await finishSetup();
   });
 
-  // --- Register this machine (idrt <mode> register) ----------------------------
+  // --- Register this machine (idr <mode> register) ----------------------------
 
   static String? hostProblem(String label) {
     final host = label.trim().toLowerCase();
@@ -593,7 +593,7 @@ class TargetController extends ChangeNotifier {
     }
   }
 
-  // --- Approvals (idrt <mode> pending|approve|reject) --------------------------
+  // --- Approvals (idr <mode> pending|approve|reject) --------------------------
 
   /// Admin machines, or a machine holding a zone key, review enrollments.
   Future<bool> isApprover() async {
@@ -674,7 +674,7 @@ class TargetController extends ChangeNotifier {
     }
   }
 
-  // --- Agent (idrt start) -------------------------------------------------------
+  // --- Agent (idr start) -------------------------------------------------------
 
   Future<void> startServing() => run('Starting the Target agent', () async {
     await target.hydrateSubscription();
@@ -692,7 +692,7 @@ class TargetController extends ChangeNotifier {
 
   Future<void> stopServing() => run('Stopping the Target agent', target.stop);
 
-  // --- Services (idrt services) -----------------------------------------------
+  // --- Services (idr services) -----------------------------------------------
 
   /// Null on success, else the validation message.
   Future<String?> addService({
@@ -718,7 +718,7 @@ class TargetController extends ChangeNotifier {
   Future<void> toggleService(String name) =>
       run('Updating $name', () => target.toggleService(name));
 
-  // --- Custom domains (idrt provider domain) ------------------------------------
+  // --- Custom domains (idr provider domain) ------------------------------------
 
   Future<List<CustomDomain>?> domains() async {
     try {

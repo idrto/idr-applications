@@ -88,7 +88,7 @@ Future<_Provider> _requireProvider(IdrTarget target) async {
   if (p == null) {
     throw const CliError(
       CliExit.usage,
-      'Run `idrt provider setup --org <your-org>` first.',
+      'Run `idr provider setup --org <your-org>` first.',
     );
   }
   return p;
@@ -100,7 +100,7 @@ _Tenant _findTenant(_Provider p, String id) {
   }
   throw CliError(
     CliExit.usage,
-    'Unknown tenant $id. Add it with `idrt provider tenant add $id`.',
+    'Unknown tenant $id. Add it with `idr provider tenant add $id`.',
   );
 }
 
@@ -139,7 +139,7 @@ void _requireNoOtherPlan(IdrTarget target, String orgName) {
 
 // --- Commands -----------------------------------------------------------------
 
-/// `idrt provider setup --org <provider-slug>`
+/// `idr provider setup --org <provider-slug>`
 class _Setup extends Command<int> {
   _Setup() {
     argParser.addOption(
@@ -186,14 +186,14 @@ class _Setup extends Command<int> {
         ui.info(
             'Service Provider: ${org.name} (${org.slug}), you are ${org.role}.');
         ui.info(
-          'Next: `idrt provider tenant add <id> [--org <customer-org>]`, then '
-          '`idrt provider register <host> --tenant <id>`.',
+          'Next: `idr provider tenant add <id> [--org <customer-org>]`, then '
+          '`idr provider register <host> --tenant <id>`.',
         );
         return CliExit.ok;
       });
 }
 
-/// `idrt provider tenant add|list|remove`
+/// `idr provider tenant add|list|remove`
 class _TenantCommand extends Command<int> {
   _TenantCommand() {
     addSubcommand(_TenantAdd());
@@ -323,7 +323,7 @@ class _TenantRemove extends Command<int> {
         if (t.id == p.machineTenant && target.registration != null) {
           throw const CliError(
             CliExit.usage,
-            'This machine serves that tenant. Run `idrt logout` first.',
+            'This machine serves that tenant. Run `idr logout` first.',
           );
         }
         await _save((
@@ -338,7 +338,7 @@ class _TenantRemove extends Command<int> {
       });
 }
 
-/// `idrt provider register <host> --tenant <id>`
+/// `idr provider register <host> --tenant <id>`
 class _Register extends Command<int> {
   _Register() {
     argParser
@@ -374,7 +374,7 @@ class _Register extends Command<int> {
           throw CliError(
             CliExit.usage,
             'This machine already serves tenant ${p.machineTenant}. '
-            'Run `idrt logout` to move it.',
+            'Run `idr logout` to move it.',
           );
         }
 
@@ -412,7 +412,7 @@ class _Register extends Command<int> {
       });
 }
 
-/// `idrt provider billing <tenant> [--buy]` — manage a tenant's seats.
+/// `idr provider billing <tenant> [--buy]` — manage a tenant's seats.
 class _Billing extends Command<int> {
   _Billing() {
     argParser

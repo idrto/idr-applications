@@ -1,8 +1,8 @@
-# idr: the Source CLI
+# idrs: the Source CLI
 
-`idr` is the **user's side**: it signs a person in, enrolls their machine as a **Source device**, connects to a Target through Presence (WebRTC, no inbound ports on either side), and lets them use the Target's services, for example by chatting with a model on Ollama or LM Studio.
+`idrs` is the **user's side**: it signs a person in, enrolls their machine as a **Source device**, connects to a Target through Presence (WebRTC, no inbound ports on either side), and lets them use the Target's services, for example by chatting with a model on Ollama or LM Studio.
 
-Targets and all admin work (approving devices, zones, policies, revocation) use the [`idrt` CLI](../idr_target_cli/README.md). For how the two fit together, see the [overview](../README.md).
+Targets and all admin work (approving devices, zones, policies, revocation) use the [`idr` CLI](../idr_target_cli/README.md). For how the two fit together, see the [overview](../README.md).
 
 Built on [`package:idr_source`](../sdks/idr_source).
 
@@ -21,9 +21,9 @@ Built on [`package:idr_source`](../sdks/idr_source).
 
 ## Role in the system
 
-1. **Sign-in** (`idr login`) goes to billing only.
-2. **Enroll** (`idr enroll`) creates a key pair on this machine and sends a certificate request. An admin approves it with `idrt … approve`, which signs the certificate (in Enterprise, under the user's zone). The private key never leaves the machine.
-3. **Connect** (`idr connect`, `idr active`) asks Presence for a session to the Target and proves who you are with that certificate.
+1. **Sign-in** (`idrs login`) goes to billing only.
+2. **Enroll** (`idrs enroll`) creates a key pair on this machine and sends a certificate request. An admin approves it with `idr … approve`, which signs the certificate (in Enterprise, under the user's zone). The private key never leaves the machine.
+3. **Connect** (`idrs connect`, `idrs active`) asks Presence for a session to the Target and proves who you are with that certificate.
    - Presence checks the certificate chain and asks billing whether you are still allowed and which services your zone may use.
    - The Target then serves only those services.
 
@@ -36,16 +36,16 @@ From the repo root:
 ```bash
 cd applications/apps/idr_sources_cli
 dart pub get
-dart run bin/idr.dart --help
+dart run bin/idrs.dart --help
 ```
 
-Optional, to get a global `idr` command:
+Optional, to get a global `idrs` command:
 
 ```bash
 dart pub global activate --source path .
 ```
 
-Examples below write `idr` for `dart run bin/idr.dart`.
+Examples below write `idrs` for `dart run bin/idrs.dart`.
 
 Native libraries, built once from `agents_engine/agent`:
 
@@ -58,7 +58,7 @@ cargo build --release -p idr-dp-ffi
 - `idr_dp` handles certificate crypto for enrollment and the session proof.
 - Both land in `agents_engine/agent/target/release/`. The CLI walks up from the current directory to find them, or you can set the paths explicitly (see below).
 
-Run `idr doctor` to check that everything is found. To build a standalone `idr` executable for other users, see [Build and distribute](../README.md#build-and-distribute).
+Run `idrs doctor` to check that everything is found. To build a standalone `idrs` executable for other users, see [Build and distribute](../README.md#build-and-distribute).
 
 The Source needs the billing server and Presence running, and a Target online. See the [Target README](../idr_target_cli/README.md#install).
 
@@ -70,8 +70,8 @@ There is no config file to write: `--flavor dev|staging|prod` (default: prod for
 |---|---|---|
 | `IDR_API_BASE_URL` | `http://127.0.0.1:3000` | Billing / auth API |
 | `IDR_DISCOVERY_URL` | `http://127.0.0.1:8081/.well-known/idr-presence.json` | Presence discovery |
-| `IDR_C_API_LIB` | next to `idr`, then searched upward | Full path to `idr_c_api` |
-| `IDR_DP_LIB` | next to `idr`, then searched upward | Full path to `idr_dp` |
+| `IDR_C_API_LIB` | next to `idrs`, then searched upward | Full path to `idr_c_api` |
+| `IDR_DP_LIB` | next to `idrs`, then searched upward | Full path to `idr_dp` |
 | `NO_COLOR` | unset | Any value turns colors off |
 | `APPDATA` (Windows) / `HOME` | OS default | Root of local state. Set it to keep a second user's profile on one machine. |
 
@@ -86,24 +86,24 @@ Files:
 
 | Command | Does |
 |---|---|
-| `idr login [--force]` | Sign in through the browser (Google SSO via billing) |
-| `idr logout [--forget-device]` | Sign out and clear connection prefs. The enrolled device stays, so `idr login` resumes without re-enrolling. `--forget-device` also deletes this machine's key and certificate. |
-| `idr status` | Mode, URLs, account, last Target, active service/model, readiness, anything needing attention |
-| `idr enroll [<target-fqhn>] [--org <slug>] [--label <name>]` | Enroll this machine as a Source and wait briefly for approval |
-| `idr connect [<target-fqhn>]` | Connect and list the services you may use. Saves the Target for later commands. |
-| `idr disconnect` | Drop the live connection |
-| `idr services` | The Target's service catalog, filtered to what you may use |
-| `idr models` | Models of the active service (`*` marks the active one) |
-| `idr active [<service>] [--model m] [--prompt "…"]` | Activate a service (asks which one if omitted). Chat services open a REPL; `--prompt` sends one message and exits. |
-| `idr doctor [--connect [<target-fqhn>]]` | Check config, billing and Presence reachability, native libraries, sign-in and enrollment; `--connect` also opens a session to the Target |
-| `idr transfer send\|list\|status\|accept\|reject\|pause\|resume\|cancel\|retry-failed` | Send and receive files and folders. Needs `source-agent run`; see [File transfer](#file-transfer). |
-| `idr version` | CLI, SDK and Dart versions |
+| `idrs login [--force]` | Sign in through the browser (Google SSO via billing) |
+| `idrs logout [--forget-device]` | Sign out and clear connection prefs. The enrolled device stays, so `idrs login` resumes without re-enrolling. `--forget-device` also deletes this machine's key and certificate. |
+| `idrs status` | Mode, URLs, account, last Target, active service/model, readiness, anything needing attention |
+| `idrs enroll [<target-fqhn>] [--org <slug>] [--label <name>]` | Enroll this machine as a Source and wait briefly for approval |
+| `idrs connect [<target-fqhn>]` | Connect and list the services you may use. Saves the Target for later commands. |
+| `idrs disconnect` | Drop the live connection |
+| `idrs services` | The Target's service catalog, filtered to what you may use |
+| `idrs models` | Models of the active service (`*` marks the active one) |
+| `idrs active [<service>] [--model m] [--prompt "…"]` | Activate a service (asks which one if omitted). Chat services open a REPL; `--prompt` sends one message and exits. |
+| `idrs doctor [--connect [<target-fqhn>]]` | Check config, billing and Presence reachability, native libraries, sign-in and enrollment; `--connect` also opens a session to the Target |
+| `idrs transfer send\|list\|status\|accept\|reject\|pause\|resume\|cancel\|retry-failed` | Send and receive files and folders. Needs `source-agent run`; see [File transfer](#file-transfer). |
+| `idrs version` | CLI, SDK and Dart versions |
 
-Global flags (`--json`, `--no-color`, `--no-input`, `--verbose`), prompts and exit codes are shared with `idrt`: see [Common behavior](../README.md#common-behavior). `idr connect` prints the Target, the transport and the local port (always none: streams are in-process).
+Global flags (`--json`, `--no-color`, `--no-input`, `--verbose`), prompts and exit codes are shared with `idr`: see [Common behavior](../README.md#common-behavior). `idrs connect` prints the Target, the transport and the local port (always none: streams are in-process).
 
 Target FQHNs look like `gpu-box--you@acme.com.idr.to`. The `.idr.to` suffix is optional.
 
-REPL inputs (`idr active ollama`):
+REPL inputs (`idrs active ollama`):
 
 | Input | Action |
 |---|---|
@@ -122,29 +122,29 @@ You and your own machines. Your Personal subscription pays.
 1. **On the Target side**, the admin machine is set up and a Target is serving. See [Target: Personal](../idr_target_cli/README.md#registration-personal).
 2. **Sign in** with the same account:
    ```bash
-   idr login
+   idrs login
    ```
    Result: `Signed in as you@example.com.`
 3. **Enroll** against your Target:
    ```bash
-   idr enroll laptop--you@example.com
+   idrs enroll laptop--you@example.com
    ```
    Result: `Source device … is waiting for Target Admin approval. Run enroll again after approval.` (exit `3`, or `{"status": "pending", …}` with `--json`).
 4. **Approve** on the admin machine:
    ```bash
-   idrt personal pending
-   idrt personal approve <id>
+   idr personal pending
+   idr personal approve <id>
    ```
 5. **Finish enrolling**, then connect:
    ```bash
-   idr enroll
-   idr connect laptop--you@example.com
+   idrs enroll
+   idrs connect laptop--you@example.com
    ```
-   - `idr enroll` prints `Source device approved: <label>--you@example.com`.
-   - `idr connect` prints `Connected to laptop--you@example.com.idr.to.` and the service list.
+   - `idrs enroll` prints `Source device approved: <label>--you@example.com`.
+   - `idrs connect` prints `Connected to laptop--you@example.com.idr.to.` and the service list.
 6. **Use it:**
    ```bash
-   idr active ollama --model gemma3:1b --prompt "Reply with the single word: pong"
+   idrs active ollama --model gemma3:1b --prompt "Reply with the single word: pong"
    ```
    Result: `Active: ollama · gemma3:1b`, then the reply.
 
@@ -155,28 +155,28 @@ You are a member of an organization. An admin puts your device in a **zone**, an
 1. **Get invited.** An org owner adds your account under **Members** in the billing portal. The `member` role is enough for a Source.
 2. **Sign in:**
    ```bash
-   idr login
+   idrs login
    ```
 3. **Enroll into the org.** Get the Target FQHN and the org slug from your admin:
    ```bash
-   idr enroll gpu-box--admin@acme.com --org acme --label alice-laptop
+   idrs enroll gpu-box--admin@acme.com --org acme --label alice-laptop
    ```
    - `--org` binds your sign-in to the organization first. Without it, the request goes to your personal account and the admin never sees it.
    - Result: `Bound to acme (acme) as member.`, then `… is waiting for Target Admin approval.` (exit `3`).
 4. **The admin approves you into your zone** on the root admin machine:
    ```bash
-   idrt enterprise approve <id> --zone zone-a
+   idr enterprise approve <id> --zone zone-a
    ```
 5. **Finish enrolling and connect:**
    ```bash
-   idr enroll
-   idr connect gpu-box--admin@acme.com
+   idrs enroll
+   idrs connect gpu-box--admin@acme.com
    ```
-   - `idr enroll` prints `Source device approved: alice-laptop--admin@acme.com`.
-   - `idr connect` lists only your zone's services, for example `ollama  (ollama)`.
+   - `idrs enroll` prints `Source device approved: alice-laptop--admin@acme.com`.
+   - `idrs connect` lists only your zone's services, for example `ollama  (ollama)`.
 6. **Use it:**
    ```bash
-   idr active ollama
+   idrs active ollama
    ```
 
 A Source never picks its own zone: the admin's `--zone` on approval decides it.
@@ -188,14 +188,14 @@ A provider runs the Target for your organization, which is the provider's tenant
 1. Your organization's owner invites you under **Members** in the portal.
 2. Sign in and enroll into that org:
    ```bash
-   idr login
-   idr enroll cam01--provider@sp.com --org acme
+   idrs login
+   idrs enroll cam01--provider@sp.com --org acme
    ```
-3. Any provider machine approves you: `idrt provider approve <id>`.
+3. Any provider machine approves you: `idr provider approve <id>`.
 4. Finish enrolling and connect:
    ```bash
-   idr enroll
-   idr connect cam01--provider@sp.com
+   idrs enroll
+   idrs connect cam01--provider@sp.com
    ```
 
 Service Provider mode has no zones: every approved Source sees every service on the tenant's Target.
@@ -208,28 +208,28 @@ Send files and folders to a Target, and receive them from it. Transfers run in t
 - survives drops: an interrupted transfer resumes where it stopped, even after a restart of either side;
 - verifies every file by SHA-256 before it is moved into place.
 
-`idr transfer …` only talks to that agent, and starts it when it isn't running (see Setup is automatic).
+`idrs transfer …` only talks to that agent, and starts it when it isn't running (see Setup is automatic).
 
 ### Before you start
 
-- This machine is enrolled and approved (see [Registration](#registration-personal)), and `idr connect <target>` works.
-- The Target runs a Target agent with file transfer on (the default for `idrt start` and the Target GUI).
+- This machine is enrolled and approved (see [Registration](#registration-personal)), and `idrs connect <target>` works.
+- The Target runs a Target agent with file transfer on (the default for `idr start` and the Target GUI).
 - Presence runs with `PRESENCE_SERVICE_TOKEN` set. Without it, the Target can't verify this Source and refuses transfers (`Target refused peer binding` in the agent log).
 
 ### Setup is automatic
 
-`idr transfer …` (and the menu's transfer items) set up and start the Source agent for you:
+`idrs transfer …` (and the menu's transfer items) set up and start the Source agent for you:
 
 - **Config:** `%APPDATA%/idr.to/source/source.toml` (`~/.config/idr.to/source/source.toml`): this build's Presence, the Targets to keep a session with (every Target you send to, plus your current one), and receiving into `Downloads/IDR`, asking first. It is rewritten when you send to a new Target.
-- **Agent:** `source-agent run` starts in the background when it isn't running (IDR Setup installs it next to `idr`), and restarts when the Targets change. It keeps running after `idr` and the terminal close.
+- **Agent:** `source-agent run` starts in the background when it isn't running (IDR Setup installs it next to `idrs`), and restarts when the Targets change. It keeps running after `idrs` and the terminal close.
 - **Log:** `%APPDATA%/idr.to/source/source-agent/agent.log`. `session up fqhn=…` means it is connected to that Target.
 - **Identity:** the agent gets this device's key through a temporary file that is deleted as soon as it has started; the key is never kept in plain text.
 
-To stop the agent, end `source-agent` in Task Manager (or `pkill source-agent`); the next `idr transfer` starts it again.
+To stop the agent, end `source-agent` in Task Manager (or `pkill source-agent`); the next `idrs transfer` starts it again.
 
-To run the agent yourself instead (another config, a service manager), set `IDR_SOURCE_CONFIG` to your own config file; `idr` then uses it as is and never starts the agent. `source-agent --config <file> --identity <identity.json> run`, with the identity exported from `secure/auth.json` (`idr.source.identity`); see `agents_engine/agent/config/source.example.toml` for every setting.
+To run the agent yourself instead (another config, a service manager), set `IDR_SOURCE_CONFIG` to your own config file; `idrs` then uses it as is and never starts the agent. `source-agent --config <file> --identity <identity.json> run`, with the identity exported from `secure/auth.json` (`idr.source.identity`); see `agents_engine/agent/config/source.example.toml` for every setting.
 
-From the interactive menu (`idr` with no arguments), once a Target is set:
+From the interactive menu (`idrs` with no arguments), once a Target is set:
 
 - **Send a file or folder to this Target** asks for one path and sends it (a folder is sent as a folder).
 - **File transfers** lists what's waiting for you, with **Accept**, **Accept … into a folder…** and **Reject** for each pending offer, plus **Show all transfers**. If the Source agent isn't running, it says so and how to start it.
@@ -239,24 +239,24 @@ The commands below do the same, plus several files at once.
 ### Sending to a Target
 
 ```bash
-idr transfer send --target laptop--you@example.com --file report.pdf --file photo.jpg
-idr transfer send --target laptop--you@example.com --dir ./project
+idrs transfer send --target laptop--you@example.com --file report.pdf --file photo.jpg
+idrs transfer send --target laptop--you@example.com --dir ./project
 ```
 
 - Result: `Queued <id>.` The agent sends it in the background.
 - `--file` can be repeated; `--dir` sends a whole folder, including subfolders, empty folders and empty files.
-- The Target's owner then accepts it (`idrt transfer accept`, or **Accept** in the Target GUI). Until then the transfer shows as `running` (waiting for the Target).
-- Follow it with `idr transfer status <id>` or `idr transfer list`. It ends as `completed`.
+- The Target's owner then accepts it (`idr transfer accept`, or **Accept** in the Target GUI). Until then the transfer shows as `running` (waiting for the Target).
+- Follow it with `idrs transfer status <id>` or `idrs transfer list`. It ends as `completed`.
 
 ### Receiving from a Target
 
 When the Target sends you something, it appears as a pending offer:
 
 ```bash
-idr transfer list                         # state "pending", with the file names and size
-idr transfer accept <id>                  # into receive_dir
-idr transfer accept <id> --out D:/Shared  # into a permitted folder
-idr transfer reject <id>
+idrs transfer list                         # state "pending", with the file names and size
+idrs transfer accept <id>                  # into receive_dir
+idrs transfer accept <id> --out D:/Shared  # into a permitted folder
+idrs transfer reject <id>
 ```
 
 - `--out` must be an existing folder inside `receive_dir` or one of `permitted_dirs`; anything else is refused.
@@ -267,40 +267,40 @@ idr transfer reject <id>
 
 | Command | Does |
 |---|---|
-| `idr transfer list` | All transfers and pending offers |
-| `idr transfer status <id>` | State, contents, connection path and progress |
-| `idr transfer pause <id>` / `resume <id>` | Pause or continue |
-| `idr transfer cancel <id>` | Stop and remove the partial data |
-| `idr transfer retry-failed <id>` | Re-send only the files that failed |
+| `idrs transfer list` | All transfers and pending offers |
+| `idrs transfer status <id>` | State, contents, connection path and progress |
+| `idrs transfer pause <id>` / `resume <id>` | Pause or continue |
+| `idrs transfer cancel <id>` | Stop and remove the partial data |
+| `idrs transfer retry-failed <id>` | Re-send only the files that failed |
 
 Add `--json` for scripts. States: `queued`, `running`, `pending` (waiting for you), `waiting` (no connection; resumes by itself), `paused`, `completed`, `rejected`, `cancelled`, or a failure such as `storage_failed`.
 
 ## Access policies: what the user sees
 
-Policies are set by the root admin (`idrt enterprise zone policy`). On the Source:
+Policies are set by the root admin (`idr enterprise zone policy`). On the Source:
 
-- `idr connect` and `idr services` list only the services your zone allows.
+- `idrs connect` and `idrs services` list only the services your zone allows.
 - Asking for anything else fails:
   ```
-  $ idr active lmstudio
+  $ idrs active lmstudio
   active failed: Failed to list models: IdrException(8/connection_refused): service not allowed for this Source's zone
   ```
-- A policy change applies from your next session. Run `idr connect` again to see it; there's nothing to re-enroll.
+- A policy change applies from your next session. Run `idrs connect` again to see it; there's nothing to re-enroll.
 
 ## Revocation: what the user sees
 
-When the admin revokes your device, or your whole zone (`idrt enterprise revoke`), your next session is refused by Presence:
+When the admin revokes your device, or your whole zone (`idr enterprise revoke`), your next session is refused by Presence:
 
 ```
-$ idr connect
+$ idrs connect
 connect failed: … IdrException(9/signaling_failed): policy_denied: session request denied: Source identity or zone policy
 ```
 
 - An already open REPL keeps working until it closes. The check happens when a session starts.
 - Members of other zones, and other members of your zone (after a member-only revocation), are unaffected.
 - There is no way to undo a revocation from the Source. Ask the admin:
-  - **Device revoked:** run `idr logout --forget-device` (this drops the revoked key), then `idr login` and `idr enroll … --org <slug>`. The admin approves it as a new device.
-  - **Zone revoked:** wait until the admin re-issues the zone (`idrt enterprise zone add`), then re-enroll the same way.
+  - **Device revoked:** run `idrs logout --forget-device` (this drops the revoked key), then `idrs login` and `idrs enroll … --org <slug>`. The admin approves it as a new device.
+  - **Zone revoked:** wait until the admin re-issues the zone (`idr enterprise zone add`), then re-enroll the same way.
 
 ## Billing
 
@@ -308,44 +308,44 @@ Sources don't buy anything. Seats and subscriptions belong to whoever pays for t
 
 | Mode | Pays | Where |
 |---|---|---|
-| Personal | You | `idrt billing` on your admin machine, or the portal's **Subscriptions** |
-| Enterprise | The organization | Org owners/admins: `idrt billing` (portal for checkout). Users/roles: `idrt enterprise members` |
-| Service Provider | The tenant's org or the provider | `idrt provider billing <tenant>` |
+| Personal | You | `idr billing` on your admin machine, or the portal's **Subscriptions** |
+| Enterprise | The organization | Org owners/admins: `idr billing` (portal for checkout). Users/roles: `idr enterprise members` |
+| Service Provider | The tenant's org or the provider | `idr provider billing <tenant>` |
 
 Each approved Source takes one seat. If the admin's approval fails with `device_seat_limit`, the organization needs another seat bundle (portal → shop) or must revoke an unused device.
 
 ## Troubleshooting
 
-Start with `idr doctor` (add `--connect` to test the whole path). Exit codes: `0` ok, `1` failed, `2` sign-in needed, `3` connection or approval pending, `5` native library or configuration, `64` usage, `70` unexpected (rerun with `--verbose`). See [Common behavior](../README.md#common-behavior).
+Start with `idrs doctor` (add `--connect` to test the whole path). Exit codes: `0` ok, `1` failed, `2` sign-in needed, `3` connection or approval pending, `5` native library or configuration, `64` usage, `70` unexpected (rerun with `--verbose`). See [Common behavior](../README.md#common-behavior).
 
 | Message | Cause | Fix |
 |---|---|---|
-| `… is waiting for Target Admin approval. Run enroll again after approval.` | Not approved yet | Ask the admin to approve, then rerun `idr enroll` |
+| `… is waiting for Target Admin approval. Run enroll again after approval.` | Not approved yet | Ask the admin to approve, then rerun `idrs enroll` |
 | `The Target Admin rejected this Source device.` | The admin rejected it | Enroll again if that was a mistake |
 | `You are not a member of <org>` (`enroll --org`) | Not invited, or invited under another email | The org owner adds you under **Members** in the portal |
 | Enroll fails with `NOT_REGISTERED`, or the admin sees no pending request | The request went to your personal account | Rerun with `--org <slug>` |
-| `This account has no Admin entity yet` / `ENTITY_NOT_FOUND` | No admin machine for that account or org yet | The admin runs `idrt … setup --role admin` first |
-| Enroll or connect fails with `401` after a long break | Expired session | `idr login --force` |
-| `policy_denied: session request denied…` | Your device or your zone was revoked, or your zone allows no services | Ask the admin (`idrt enterprise org` shows zone status) |
+| `This account has no Admin entity yet` / `ENTITY_NOT_FOUND` | No admin machine for that account or org yet | The admin runs `idr … setup --role admin` first |
+| Enroll or connect fails with `401` after a long break | Expired session | `idrs login --force` |
+| `policy_denied: session request denied…` | Your device or your zone was revoked, or your zone allows no services | Ask the admin (`idr enterprise org` shows zone status) |
 | `service not allowed for this Source's zone` | Your zone's policy doesn't include that service | Use an allowed service, or ask for a policy change |
-| `target_not_registered: target not registered` | The Target is offline or the FQHN is wrong. Prefs may still point at an old Target. | Check the Target runs `idrt start`, then `idr connect <correct-fqhn>` |
+| `target_not_registered: target not registered` | The Target is offline or the FQHN is wrong. Prefs may still point at an old Target. | Check the Target runs `idr start`, then `idrs connect <correct-fqhn>` |
 | `source_unverified` | Session proof rejected: an old `idr_c_api` build, or this machine's clock is more than 2 minutes off | Rebuild `idr_c_api` (`--features native`); sync the clock |
 | `policy_unavailable` | Presence couldn't reach billing's policy check | Admin: check `session_policy_url` and that `PRESENCE_SERVICE_TOKEN` matches in billing and Presence |
 | `The chat REPL needs an interactive terminal.` | Run from a script or pipe, or with `--no-input` | Use `--prompt "…"` |
-| `idr doctor` exits `5`, library `not found` | `idr_c_api` or `idr_dp` not found | Build them and copy them next to `idr`, or set `IDR_C_API_LIB` / `IDR_DP_LIB` |
+| `idrs doctor` exits `5`, library `not found` | `idr_c_api` or `idr_dp` not found | Build them and copy them next to `idrs`, or set `IDR_C_API_LIB` / `IDR_DP_LIB` |
 | `cannot load …: a library it depends on is missing` | On Windows, `idr_c_api.dll` needs OpenSSL 3 and the VC++ runtime | See [Build and distribute](../README.md#build-and-distribute) |
-| `source-agent did not start` (`idr transfer …`) | The agent exited at startup (no network, Presence unreachable, identity not approved) | Read `%APPDATA%/idr.to/source/source-agent/agent.log`, fix the cause, run the command again |
-| Agent log: `Target refused peer binding; transfers disabled on this session` | The Target couldn't verify this Source: Presence runs without `PRESENCE_SERVICE_TOKEN`, or the device was revoked | Start Presence with the token; check the device in `idrt … devices` |
+| `source-agent did not start` (`idrs transfer …`) | The agent exited at startup (no network, Presence unreachable, identity not approved) | Read `%APPDATA%/idr.to/source/source-agent/agent.log`, fix the cause, run the command again |
+| Agent log: `Target refused peer binding; transfers disabled on this session` | The Target couldn't verify this Source: Presence runs without `PRESENCE_SERVICE_TOKEN`, or the device was revoked | Start Presence with the token; check the device in `idr … devices` |
 | Agent log: `DP identity file missing; continuing unenrolled` | `[dp].identity_path` is wrong, or the file was never exported | Redo [step 2](#2-save-this-devices-identity-for-the-agent) |
-| `idr transfer send` stays `running` | The Target hasn't accepted yet, or the Target isn't in `[daemon].targets` | Ask the Target to accept; add the FQHN to `targets` and restart the agent |
+| `idrs transfer send` stays `running` | The Target hasn't accepted yet, or the Target isn't in `[daemon].targets` | Ask the Target to accept; add the FQHN to `targets` and restart the agent |
 | `accept --out …` refused | The folder doesn't exist or isn't inside `receive_dir` / `permitted_dirs` | Create it there, or add its parent to `permitted_dirs` |
 | `Missing <target-fqhn>.` (exit `64`) | No Target given and nothing to prompt with | Pass the Target, or run in a terminal |
 | `'C:\install' is not recognized…` on Windows | The Flutter `dart` launcher breaks on arguments with spaces when Flutter is installed in a path with spaces | Call `…\flutter\bin\cache\dart-sdk\bin\dart.exe` directly |
 
 **Handing a machine to someone else:**
 
-- Run `idr logout --forget-device`. A plain `logout` keeps the device key, and whoever signs in next on the same OS account would connect with it.
-- Ask the admin to `idrt enterprise revoke <ski>` the old device, so its seat is freed and its certificate is dead on billing.
+- Run `idrs logout --forget-device`. A plain `logout` keeps the device key, and whoever signs in next on the same OS account would connect with it.
+- Ask the admin to `idr enterprise revoke <ski>` the old device, so its seat is freed and its certificate is dead on billing.
 
 Several users on one machine (testing): give each its own `APPDATA` folder. Each folder then has its own session and device key.
 

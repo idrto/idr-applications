@@ -27,7 +27,7 @@ class LogoutCommand extends Command<int> {
         ui.result({'signedOut': true, 'forgotDevice': forget}, human: () {
           ui.success(forget
               ? 'Signed out and forgot this Source device.'
-              : 'Signed out. This machine stays enrolled; `idr login` '
+              : 'Signed out. This machine stays enrolled; `idrs login` '
                   'resumes.');
         });
         return CliExit.ok;

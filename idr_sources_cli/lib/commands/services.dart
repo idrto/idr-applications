@@ -47,7 +47,7 @@ class ServicesCommand extends Command<int> {
   Future<int> run() => withSource(runServices);
 }
 
-/// `idr list services` alias.
+/// `idrs list services` alias.
 class ListCommand extends Command<int> {
   ListCommand() {
     addSubcommand(_ListServicesCommand());
@@ -65,7 +65,7 @@ class _ListServicesCommand extends Command<int> {
   String get name => 'services';
 
   @override
-  String get description => 'Alias for `idr services`.';
+  String get description => 'Alias for `idrs services`.';
 
   @override
   Future<int> run() => withSource(runServices);

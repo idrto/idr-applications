@@ -20,7 +20,7 @@ class ModelsCommand extends Command<int> {
           throw const CliError(
             CliExit.usage,
             'No active service.',
-            hint: 'Run `idr active <service>` first.',
+            hint: 'Run `idrs active <service>` first.',
             code: 'SERVICE_REQUIRED',
           );
         }

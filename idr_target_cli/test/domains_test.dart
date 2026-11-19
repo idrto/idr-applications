@@ -25,13 +25,13 @@ void main() {
     expect(lines,
         contains('Not verified yet: app.customer.com has no CNAME record.'));
     expect(
-        lines.last, 'Then run `idrt provider domain verify app.customer.com`.');
+        lines.last, 'Then run `idr provider domain verify app.customer.com`.');
   });
 
   test('a verified domain says to restart the agent for its certificate', () {
     expect(checkReport(_domain('verified')), [
       'Verified: app.customer.com points to this Target.',
-      'Restart `idrt start` so the agent requests its certificate.',
+      'Restart `idr start` so the agent requests its certificate.',
     ]);
   });
 

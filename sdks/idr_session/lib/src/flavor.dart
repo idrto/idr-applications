@@ -114,7 +114,7 @@ class IdrFlavor {
   }
 }
 
-/// The `idr` (Source) state folder for [IdrFlavor.current]:
+/// The `idrs` (Source) state folder for [IdrFlavor.current]:
 /// `%APPDATA%/idr.to/source` or `~/.config/idr.to/source` (`idr.to/source-dev`, …).
 Directory get idrSourceDirectory => idrStateDirectory('source');
 

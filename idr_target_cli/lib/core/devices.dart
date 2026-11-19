@@ -27,7 +27,7 @@ void requireMode(IdrTarget target, IdrBusinessPlan plan) {
     throw CliError(
       CliExit.usage,
       current == null
-          ? 'Run `idrt ${_cmd(plan)} setup` first.'
+          ? 'Run `idr ${_cmd(plan)} setup` first.'
           : 'This machine is set up for ${current.title}, not ${plan.title}.',
     );
   }
@@ -39,7 +39,7 @@ void requireAdminMachine(IdrTarget target, IdrBusinessPlan plan) {
     throw CliError(
       CliExit.usage,
       'Only an admin machine can review enrollments '
-      '(`idrt ${_cmd(plan)} setup --role admin`).',
+      '(`idr ${_cmd(plan)} setup --role admin`).',
     );
   }
 }
@@ -60,9 +60,9 @@ Future<void> requireApprover(IdrTarget target, IdrBusinessPlan plan) async {
               'yet, so it cannot approve.'
         : 'Only an admin machine can review enrollments.',
     hint: waiting.isNotEmpty
-        ? 'The root admin approves it in `idrt` > Pending approvals.'
-        : 'Root admin: `idrt ${_cmd(plan)} setup --role admin`. Zone admin: '
-              '`idrt ${_cmd(plan)} setup` picks up your zone.',
+        ? 'The root admin approves it in `idr` > Pending approvals.'
+        : 'Root admin: `idr ${_cmd(plan)} setup --role admin`. Zone admin: '
+              '`idr ${_cmd(plan)} setup` picks up your zone.',
     code: 'NOT_APPROVER',
   );
 }
@@ -135,15 +135,15 @@ Future<void> registerThisMachine(
     final cmd = _cmd(plan);
     ui.info(
       approveHere ?? approver
-          ? 'Approve it here: `idrt $cmd pending`, then `idrt $cmd approve <id>`.'
+          ? 'Approve it here: `idr $cmd pending`, then `idr $cmd approve <id>`.'
           : zone != null
           ? 'Waiting for an admin of zone $zone to approve it '
-                '(`idrt` > Pending approvals on their machine).'
+                '(`idr` > Pending approvals on their machine).'
           : 'Waiting for approval. On your admin machine run '
-                '`idrt $cmd approve <id>`.',
+                '`idr $cmd approve <id>`.',
     );
   } else {
-    ui.info('Next: `idrt start`.');
+    ui.info('Next: `idr start`.');
   }
 }
 
@@ -169,11 +169,11 @@ Future<bool> approveSelfIfPending(
   await requireBilling(target, plan, allowMembers: true);
   await target.approveEnrollment(enrollId: mine.first.id, zone: zone);
   ui.info('Approved ${reg.verifiedFqhn} on this machine.');
-  ui.info('Next: `idrt start`.');
+  ui.info('Next: `idr start`.');
   return true;
 }
 
-/// `idrt <mode> pending` (admin machine)
+/// `idr <mode> pending` (admin machine)
 class PendingCommand extends Command<int> {
   PendingCommand(this.plan, {this.adminOnly = true});
 
@@ -217,9 +217,9 @@ class PendingCommand extends Command<int> {
           ui.hint(
             fqhn == null
                 ? 'Nobody can enroll yet: register this machine as a Target '
-                      'first (`idrt ${_cmd(plan)} register`).'
+                      'first (`idr ${_cmd(plan)} register`).'
                 : 'People appear here after they run '
-                      '`idr enroll $fqhn`'
+                      '`idrs enroll $fqhn`'
                       '${plan == IdrBusinessPlan.enterprise ? ' --org <org-slug>' : ''}.',
           );
           return;
@@ -237,7 +237,7 @@ class PendingCommand extends Command<int> {
               ],
           ],
         );
-        ui.hint('Approve: idrt ${_cmd(plan)} approve <id>');
+        ui.hint('Approve: idr ${_cmd(plan)} approve <id>');
       },
     );
     return CliExit.ok;
@@ -275,7 +275,7 @@ Future<EnrollmentRequest> _choosePending(IdrTarget target) async {
   );
 }
 
-/// `idrt <mode> approve <id>` / `idrt <mode> reject <id>` (admin machine)
+/// `idr <mode> approve <id>` / `idr <mode> reject <id>` (admin machine)
 class DecideCommand extends Command<int> {
   DecideCommand(
     this.plan, {
@@ -345,9 +345,9 @@ class DecideCommand extends Command<int> {
         CliExit.usage,
         'This machine has no key for zone $needed.',
         hint: isAdminMachine(target)
-            ? 'Issue it with `idrt enterprise zone add $needed`, or let an '
+            ? 'Issue it with `idr enterprise zone add $needed`, or let an '
                   'admin of $needed approve it on their machine.'
-            : 'If you are an admin of $needed: `idrt enterprise setup '
+            : 'If you are an admin of $needed: `idr enterprise setup '
                   '--zone $needed`.',
         code: 'NO_ZONE_KEY',
       );

@@ -1,5 +1,5 @@
 name: idr_target_cli
-description: idrt CLI — Target agent (Personal / Enterprise / Service Provider) over idr_target.
+description: idr CLI — Target agent (Personal / Enterprise / Service Provider) over idr_target.
 version: 0.2.0
 publish_to: none
 environment:
@@ -15,4 +15,4 @@ dev_dependencies:
   lints: ^4.0.0
   test: ^1.25.0
 executables:
-  idrt: idrt
+  idr: idr

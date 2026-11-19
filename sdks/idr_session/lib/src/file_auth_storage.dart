@@ -17,7 +17,7 @@ import 'flavor.dart';
 /// ponytail: no Keychain / libsecret on macOS / Linux yet; add a key there if
 /// those builds ship to end users.
 ///
-/// Several processes can share one file (the Target GUI and `idrt` do): every
+/// Several processes can share one file (the Target GUI and `idr` do): every
 /// read-modify-write holds an OS lock on `<file>.lock` and replaces the file
 /// with a rename, so a crash never leaves it half written.
 ///

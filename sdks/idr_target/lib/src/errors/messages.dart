@@ -79,7 +79,7 @@ abstract final class IdrTargetErrorMessages {
   static const agentCrashBudgetExceeded =
       'target-agent crashed too many times.';
   static const agentAlreadyRunning =
-      'This Target is already running (started from the Target app or `idrt start`). '
+      'This Target is already running (started from the Target app or `idr start`). '
       'Stop it there first.';
   static const noLoginProviders = 'No sign-in methods are configured on Auth. '
       'Add SSO credentials on the server and try again.';

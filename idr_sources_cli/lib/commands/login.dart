@@ -43,7 +43,7 @@ class LoginCommand extends Command<int> {
           writeAttention(source);
           // In a terminal the home menu follows instead.
           if (enrolled == null && !ui.interactive) {
-            ui.hint('Next: idr enroll <target-fqhn>');
+            ui.hint('Next: idrs enroll <target-fqhn>');
           }
         });
         return CliExit.ok;

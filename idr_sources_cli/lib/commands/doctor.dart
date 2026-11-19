@@ -25,7 +25,7 @@ class DoctorCommand extends Command<int> {
       'enrollment.';
 
   @override
-  String get invocation => 'idr doctor [--connect [<target-fqhn>]]';
+  String get invocation => 'idrs doctor [--connect [<target-fqhn>]]';
 
   @override
   Future<int> run() => withSource((source) async {
@@ -41,7 +41,7 @@ class DoctorCommand extends Command<int> {
               ? Check('config dir', CheckStatus.ok, dir.path)
               : Check('config dir', CheckStatus.warn,
                   '${dir.path} (not created yet)',
-                  hint: 'Created on first sign-in (`idr login`).'),
+                  hint: 'Created on first sign-in (`idrs login`).'),
           await httpCheck('billing API', cfg.apiBase,
               hint: 'Start billing, or set IDR_API_BASE_URL.'),
           await httpCheck(
@@ -61,16 +61,16 @@ class DoctorCommand extends Command<int> {
             'idr_c_api (WebRTC)',
             source.resolvedLibraryPath,
             hint: 'cargo build --release -p idr-c-api --features native, then '
-                'copy it next to idr (with OpenSSL libcrypto/libssl on Windows) '
+                'copy it next to idrs (with OpenSSL libcrypto/libssl on Windows) '
                 'or set IDR_C_API_LIB.',
           ),
           dpCheck(
             hint: 'cargo build --release -p idr-dp-ffi, then copy it next to '
-                'idr or set IDR_DP_LIB.',
+                'idrs or set IDR_DP_LIB.',
           ),
           session == null
               ? const Check('sign-in', CheckStatus.fail, 'signed out',
-                  hint: 'idr login', exitCode: CliExit.auth)
+                  hint: 'idrs login', exitCode: CliExit.auth)
               : Check(
                   'sign-in',
                   CheckStatus.ok,
@@ -79,11 +79,11 @@ class DoctorCommand extends Command<int> {
           enrolled == null
               ? const Check('identity', CheckStatus.warn,
                   'not enrolled (connects with the bearer token only)',
-                  hint: 'idr enroll <target-fqhn> [--org <slug>]')
+                  hint: 'idrs enroll <target-fqhn> [--org <slug>]')
               : Check('identity', CheckStatus.ok, 'enrolled as $enrolled'),
           target == null
               ? const Check('target', CheckStatus.warn, 'none chosen yet',
-                  hint: 'idr connect <target-fqhn>')
+                  hint: 'idrs connect <target-fqhn>')
               : Check('target', CheckStatus.ok, target),
         ];
         if (argResults!['connect'] as bool) {

@@ -1,4 +1,4 @@
-// Runs the built `idrt` executable against an empty profile and dead
+// Runs the built `idr` executable against an empty profile and dead
 // endpoints: no real state, agent or service is touched.
 import 'dart:convert';
 import 'dart:io';
@@ -9,7 +9,7 @@ import 'package:test/test.dart';
 late String exe;
 late Directory tmp;
 
-Future<ProcessResult> idrt(List<String> args, [Map<String, String>? env]) =>
+Future<ProcessResult> idr(List<String> args, [Map<String, String>? env]) =>
     Process.run(exe, ['--flavor=dev', ...args], environment: {
       'APPDATA': tmp.path,
       'HOME': tmp.path,
@@ -29,21 +29,21 @@ void main() {
         Platform.resolvedExecutable, ['build', 'cli', '-o', out]);
     expect(build.exitCode, 0, reason: '${build.stdout}${build.stderr}');
     exe =
-        p.join(out, 'bundle', 'bin', Platform.isWindows ? 'idrt.exe' : 'idrt');
+        p.join(out, 'bundle', 'bin', Platform.isWindows ? 'idr.exe' : 'idr');
   });
 
   tearDownAll(() => tmp.delete(recursive: true));
 
   test('help and version', () async {
-    final r = await idrt(['--help']);
+    final r = await idr(['--help']);
     expect(r.exitCode, 0);
     expect(r.stdout, contains('doctor'));
     expect(r.stdout, contains('Exit codes:'));
-    expect((await idrt(['--version'])).stdout, startsWith('idrt '));
+    expect((await idr(['--version'])).stdout, startsWith('idr '));
   });
 
   test('bare invocation without a terminal prints usage, no menu', () async {
-    final r = await idrt([]);
+    final r = await idr([]);
     expect(r.exitCode, 0);
     expect(r.stdout, contains('Available commands:'));
     expect(r.stdout, isNot(contains('What would you like to do?')));
@@ -51,8 +51,8 @@ void main() {
 
   test('approve and register need a session before asking anything',
       () async {
-    expect((await idrt(['personal', 'approve'])).exitCode, 2);
-    expect((await idrt(['--json', 'provider', 'register'])).exitCode, 2);
+    expect((await idr(['personal', 'approve'])).exitCode, 2);
+    expect((await idr(['--json', 'provider', 'register'])).exitCode, 2);
   });
 
   test('new enterprise commands need a session and never prompt in scripts',
@@ -64,33 +64,33 @@ void main() {
       ['enterprise', 'devices'],
       ['enterprise', 'members'],
     ]) {
-      final r = await idrt(['--json', ...args]);
+      final r = await idr(['--json', ...args]);
       expect(r.exitCode, 2, reason: args.join(' '));
       expect(json(r)['ok'], isFalse);
     }
   });
 
   test('status JSON is valid and free of SDK log lines', () async {
-    final r = await idrt(['--json', 'status']);
+    final r = await idr(['--json', 'status']);
     expect(r.exitCode, 0);
     expect(r.stdout, isNot(contains('[idr_target]')));
     expect(json(r)['account'], isNull);
   });
 
   test('start needs a session (exit 2)', () async {
-    final r = await idrt(['start']);
+    final r = await idr(['start']);
     expect(r.exitCode, 2);
-    expect(r.stderr, contains('idrt login'));
+    expect(r.stderr, contains('idr login'));
   });
 
   test('missing arguments fail fast when not interactive', () async {
-    final r = await idrt(['--json', 'services', 'add']);
+    final r = await idr(['--json', 'services', 'add']);
     expect(r.exitCode, 64);
     expect(json(r)['error']['code'], 'MISSING_ARGUMENT');
   });
 
   test('doctor reports a missing target-agent and dead endpoints', () async {
-    final r = await idrt(['--json', 'doctor'], {
+    final r = await idr(['--json', 'doctor'], {
       'IDR_TARGET_AGENT': p.join(tmp.path, 'missing', 'target-agent.exe'),
     });
     final checks = {

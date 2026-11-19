@@ -102,7 +102,7 @@ String? orgSlugProblem(String slug) => RegExp(r'\s').hasMatch(slug)
           'from the billing portal.'
     : slug == 'me' || slug == 'personal'
     ? 'That is your personal account: use Personal setup '
-          '(`idrt personal setup`).'
+          '(`idr personal setup`).'
     : null;
 
 /// Org `owner` / `admin` can buy and register hosts; `member` cannot.
@@ -124,12 +124,12 @@ void requireSession(IdrTarget target) {
   if (target.session == null) {
     throw const CliError(
       CliExit.auth,
-      'Not signed in. Run `idrt login` first.',
+      'Not signed in. Run `idr login` first.',
     );
   }
 }
 
-/// Plan this machine runs under (set by `idrt <mode> setup` or billing hydrate).
+/// Plan this machine runs under (set by `idr <mode> setup` or billing hydrate).
 IdrBusinessPlan? currentPlan(IdrTarget target) =>
     IdrBusinessPlan.fromPlanCode(target.userState.planCode);
 

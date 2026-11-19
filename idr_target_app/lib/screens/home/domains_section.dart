@@ -13,7 +13,7 @@ import '../../ui/components/status/idr_status.dart';
 import '../../ui/theme/idr_theme.dart';
 import '../../widgets/common.dart';
 
-/// Custom domains for a Service Provider Target (`idrt provider domain ...`).
+/// Custom domains for a Service Provider Target (`idr provider domain ...`).
 ///
 /// How it works, in the order the user sees it:
 /// 1. Billing records the domain and tells us the CNAME target.

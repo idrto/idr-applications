@@ -33,13 +33,13 @@ class EnrollCommand extends Command<int> {
 
   @override
   String get invocation =>
-      'idr enroll [<target-fqhn>] [--label <name>] [--org <slug>] [--zone <zone>]';
+      'idrs enroll [<target-fqhn>] [--label <name>] [--org <slug>] [--zone <zone>]';
 
   @override
   String get usageFooter => '\nExamples:\n'
-      '  idr enroll laptop--you@example.com\n'
-      '  idr enroll gpu-box--admin@acme.com --org acme --label alice-laptop\n'
-      '  idr enroll gpu-box--admin@acme.com --org acme --zone fin';
+      '  idrs enroll laptop--you@example.com\n'
+      '  idrs enroll gpu-box--admin@acme.com --org acme --label alice-laptop\n'
+      '  idrs enroll gpu-box--admin@acme.com --org acme --zone fin';
 
   @override
   Future<int> run() => withSource((source) async {
@@ -117,13 +117,13 @@ class EnrollCommand extends Command<int> {
           }
           // A person is watching: wait here instead of asking them to rerun.
           ui.hint(shownZone == null
-              ? 'Ask the Target admin to approve it: `idrt` > Pending '
+              ? 'Ask the Target admin to approve it: `idr` > Pending '
                   'approvals.'
-              : 'Ask an admin of zone $shownZone to approve it: `idrt` > Pending '
+              : 'Ask an admin of zone $shownZone to approve it: `idr` > Pending '
                   'approvals.');
           host = await ui.task(
             'Waiting for the admin to approve (Ctrl+C stops; '
-            '`idr enroll` resumes)',
+            '`idrs enroll` resumes)',
             () async {
               while (true) {
                 try {
@@ -150,7 +150,7 @@ class EnrollCommand extends Command<int> {
           },
           human: () {
             writeAttention(source);
-            ui.hint('Next: idr connect');
+            ui.hint('Next: idrs connect');
           },
         );
         return CliExit.ok;

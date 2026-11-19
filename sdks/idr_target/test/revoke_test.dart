@@ -55,7 +55,7 @@ void main() {
     );
   });
 
-  test('approve with no seats left is quotaExceeded (exit 4 in idrt)',
+  test('approve with no seats left is quotaExceeded (exit 4 in idr)',
       () async {
     final client = EnrollClient(
       controlPlaneUrl: 'http://cp.test',

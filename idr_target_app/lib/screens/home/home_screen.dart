@@ -568,7 +568,7 @@ class _BillingSectionState extends State<BillingSection> {
   }
 }
 
-/// Environment checks equivalent to `idrt doctor` (run on demand).
+/// Environment checks equivalent to `idr doctor` (run on demand).
 class DiagnosticsSection extends StatefulWidget {
   const DiagnosticsSection({super.key});
 

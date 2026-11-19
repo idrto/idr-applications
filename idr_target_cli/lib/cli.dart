@@ -13,7 +13,7 @@ import 'modes/provider.dart';
 const idrtVersion = '0.2.0';
 
 Future<int> runIdrtCli(List<String> args) => (CliRunner(
-      'idrt',
+      'idr',
       'IDR Target: serve local services to approved Sources, and administer '
           'devices (Personal / Enterprise / Service Provider).',
       version: idrtVersion,
@@ -54,21 +54,21 @@ CliError? translateTargetError(Object e) => switch (e) {
                   : CliExit.failure,
           message,
           hint: billingAttentionCodes.contains(code)
-              ? 'Run `idrt billing`.'
+              ? 'Run `idr billing`.'
               : null,
           code: code.wire,
         ),
       StateError(:final message) when message.contains('sign in first') =>
         CliError(CliExit.auth, 'Not signed in.',
-            hint: 'Run `idrt login`.', code: 'AUTH_REQUIRED'),
+            hint: 'Run `idr login`.', code: 'AUTH_REQUIRED'),
       StateError(:final message) when message.contains('binary not found') =>
         CliError(CliExit.config, message,
             hint: 'Build target-agent and set IDR_TARGET_AGENT, or put it '
-                'next to idrt or on PATH (`idrt doctor`).',
+                'next to idr or on PATH (`idr doctor`).',
             code: 'AGENT_MISSING'),
       StateError(:final message) => CliError(CliExit.failure, message),
       _ when '$e'.contains('ClientException') => CliError(
           CliExit.connect, 'Network error: $e',
-          hint: 'Run `idrt doctor`.', code: 'NETWORK'),
+          hint: 'Run `idr doctor`.', code: 'NETWORK'),
       _ => null,
     };

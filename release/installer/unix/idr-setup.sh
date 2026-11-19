@@ -1,7 +1,7 @@
 #!/bin/sh
 # IDR Setup for Linux and macOS: pick components, get them plus the agents they
 # need (shared ones once) from the signed release manifest, install into one
-# folder, link idr / idrt into ~/.local/bin. Rerun to add, update or remove.
+# folder, link idrs / idr into ~/.local/bin. Rerun to add, update or remove.
 #
 #   sh idr-setup.sh                                   # interactive
 #   sh idr-setup.sh --components target-cli,source-cli
@@ -86,7 +86,7 @@ remove_orphans() { # <file listing>
 
 link_bins() {
   mkdir -p "$BIN_DIR"
-  for pair in target-cli:idrt source-cli:idr; do
+  for pair in target-cli:idr source-cli:idrs; do
     id="${pair%%:*}"; exe="${pair#*:}"
     if [ -f "$STATE/$id.sha256" ] && [ -x "$PREFIX/$exe" ]; then
       ln -sf "$PREFIX/$exe" "$BIN_DIR/$exe"
@@ -214,8 +214,8 @@ say ""
 say "IDR $VERSION is installed in $PREFIX."
 case ":$PATH:" in
   *":$BIN_DIR:"*) ;;
-  *) say "Add $BIN_DIR to your PATH to run idr / idrt, e.g.: echo 'export PATH=\"$BIN_DIR:\$PATH\"' >> ~/.profile" ;;
+  *) say "Add $BIN_DIR to your PATH to run idrs / idr, e.g.: echo 'export PATH=\"$BIN_DIR:\$PATH\"' >> ~/.profile" ;;
 esac
 if [ -n "$get" ] && command -v pgrep >/dev/null 2>&1 && pgrep -f "$PREFIX/target-agent" >/dev/null 2>&1; then
-  say "A target-agent from the old version is still running: restart it (idrt stop, then idrt start)."
+  say "A target-agent from the old version is still running: restart it (idr stop, then idr start)."
 fi

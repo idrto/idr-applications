@@ -29,7 +29,7 @@ class PersonalCommand extends Command<int> {
       'Personal mode: your own subscription and machines.';
 }
 
-/// `idrt personal setup [--host <label>]`
+/// `idr personal setup [--host <label>]`
 class _Setup extends Command<int> {
   _Setup() {
     argParser
@@ -100,13 +100,13 @@ class _Setup extends Command<int> {
           await registerThisMachine(target, _plan, host);
         } else if (target.registration == null) {
           ui
-              .info('Next: `idrt personal register <host>` (e.g. laptop).');
+              .info('Next: `idr personal register <host>` (e.g. laptop).');
         }
         return CliExit.ok;
       });
 }
 
-/// `idrt personal register <host>`
+/// `idr personal register <host>`
 class _Register extends Command<int> {
   @override
   String get name => 'register';

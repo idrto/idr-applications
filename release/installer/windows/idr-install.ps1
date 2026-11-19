@@ -97,7 +97,7 @@ function Assert-NotRunning {
     try { [IO.File]::Open($_.FullName, 'Open', 'ReadWrite', 'None').Dispose(); $false } catch { $true }
   } | ForEach-Object { $_.Name }
   if ($busy) { Fail ("These IDR programs are running from $InstallDir`: $($busy -join ', '). " +
-      'Stop them (idrt stop, or quit the Target app) and run setup again.') }
+      'Stop them (idr stop, or quit the Target app) and run setup again.') }
 }
 
 function Resolve-Plan {
@@ -203,7 +203,7 @@ try {
   switch ($Mode) {
     'Resolve' { Resolve-Plan | Out-Null }
     'Apply' { Install-Plan }
-    'Install' { Resolve-Plan | Out-Null; Save-Downloads; Install-Plan; Write-Host "IDR is installed in $InstallDir. Open a new terminal to use idrt / idr." }
+    'Install' { Resolve-Plan | Out-Null; Save-Downloads; Install-Plan; Write-Host "IDR is installed in $InstallDir. Open a new terminal to use idr / idr." }
     'Uninstall' { Set-UserPath $false; if (Test-Path $StateDir) { Remove-Item -Recurse -Force $StateDir } }
   }
 } catch {

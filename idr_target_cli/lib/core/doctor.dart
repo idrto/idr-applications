@@ -27,7 +27,7 @@ Future<bool> agentRunning() async {
 }
 
 const _agentHint = 'cargo build --release -p target-agent --features webrtc, '
-    'then put it next to idrt, on PATH, or set IDR_TARGET_AGENT.';
+    'then put it next to idr, on PATH, or set IDR_TARGET_AGENT.';
 
 class DoctorCommand extends Command<int> {
   @override
@@ -64,45 +64,45 @@ class DoctorCommand extends Command<int> {
           ),
           session == null
               ? const Check('sign-in', CheckStatus.fail, 'signed out',
-                  hint: 'idrt login', exitCode: CliExit.auth)
+                  hint: 'idr login', exitCode: CliExit.auth)
               : Check('sign-in', CheckStatus.ok, session.email),
           if (session != null)
             plan == null
                 ? const Check('plan', CheckStatus.warn, 'no mode chosen',
-                    hint: 'idrt personal setup | idrt enterprise setup --org '
-                        '<slug> | idrt provider setup --org <slug>')
+                    hint: 'idr personal setup | idr enterprise setup --org '
+                        '<slug> | idr provider setup --org <slug>')
                 : isCovered(target, plan)
                     ? Check('plan', CheckStatus.ok,
                         '${plan.title} subscription active')
                     : Check('plan', CheckStatus.fail,
                         '${plan.title} subscription missing or expired',
-                        hint: 'idrt billing', exitCode: CliExit.billing),
+                        hint: 'idr billing', exitCode: CliExit.billing),
           if (session != null)
             reg == null
                 ? const Check('host', CheckStatus.warn, 'not registered',
-                    hint: 'idrt <mode> register <host>')
+                    hint: 'idr <mode> register <host>')
                 : target.state.enrollment.awaitingAdmin
                     ? Check('host', CheckStatus.warn,
                         '${reg.verifiedFqhn} awaiting admin approval',
-                        hint: 'On the admin machine: idrt <mode> approve <id>')
+                        hint: 'On the admin machine: idr <mode> approve <id>')
                     : Check('host', CheckStatus.ok, reg.verifiedFqhn),
           File(p.join(dir, 'identity.dp.json')).existsSync()
               ? const Check('identity', CheckStatus.ok,
                   'approved certificate (identity.dp.json)')
               : const Check('identity', CheckStatus.warn,
                   'no approved certificate yet',
-                  hint: 'Written by `idrt start` once the host is approved.'),
+                  hint: 'Written by `idr start` once the host is approved.'),
           await _agentBinaryCheck(agent),
           dpCheck(
             hint: 'cargo build --release -p idr-dp-ffi, then copy it next to '
-                'idrt or set IDR_DP_LIB.',
+                'idr or set IDR_DP_LIB.',
           ),
           await _agentConfigCheck(agent, File(p.join(dir, 'target.local.toml'))),
           await agentRunning()
               ? const Check('agent process', CheckStatus.ok,
                   'running (metrics port $agentMetricsPort answers)')
               : const Check('agent process', CheckStatus.warn, 'not running',
-                  hint: 'idrt start'),
+                  hint: 'idr start'),
         ];
         return reportChecks(checks);
       });
@@ -146,7 +146,7 @@ Future<Check> _agentConfigCheck(String? agent, File toml) async {
   const name = 'agent config';
   if (!toml.existsSync()) {
     return const Check(name, CheckStatus.skip,
-        'no target.local.toml yet (written by `idrt start`)');
+        'no target.local.toml yet (written by `idr start`)');
   }
   if (agent == null || !File(agent).existsSync()) {
     return const Check(name, CheckStatus.skip, 'needs target-agent');
@@ -165,7 +165,7 @@ Future<Check> _agentConfigCheck(String? agent, File toml) async {
     final why = '${r.stderr}'.trim().split('\n').first;
     return Check(name, CheckStatus.fail,
         '${toml.path} rejected: ${why.isEmpty ? 'exit ${r.exitCode}' : why}',
-        hint: 'Rerun `idrt start` to regenerate it.', exitCode: CliExit.config);
+        hint: 'Rerun `idr start` to regenerate it.', exitCode: CliExit.config);
   } catch (e) {
     return Check(name, CheckStatus.fail, 'agent doctor failed ($e)',
         exitCode: CliExit.config);

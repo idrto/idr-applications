@@ -293,7 +293,7 @@ class _TransfersSectionState extends State<TransfersSection> {
             child: IdrEmpty(
               icon: Icons.move_to_inbox_outlined,
               title: 'No transfers yet',
-              description: 'A Source sends with: idr transfer send --target <this host> --file <path>',
+              description: 'A Source sends with: idrs transfer send --target <this host> --file <path>',
             ),
           ),
         if (rest.isNotEmpty)

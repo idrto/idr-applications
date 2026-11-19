@@ -14,7 +14,7 @@
 Paths in the manifest are relative to the channel root (/staging/, /stable/),
 so promoting a version only copies packages/<V> and rewrites "channel".
 Components and dependencies mirror how the apps find their native pieces:
-`idrt` and the Target GUI look for target-agent next to their own exe, `idr`
+`idr` and the Target GUI look for target-agent next to their own exe, `idrs`
 for idr_c_api and source-agent next to its exe. The installer puts every
 component in one folder, so the shared target-agent is installed once.
 """
@@ -34,19 +34,19 @@ OPTIONAL_PLATFORMS = {'macos-arm64'}
 
 # id, display name, kind, CI artifact prefix, requires, platforms
 COMPONENTS = [
-    ('target-cli', 'IDR Target CLI', 'app', 'idrt', ['target-agent'], PLATFORMS),
+    ('target-cli', 'IDR Target CLI', 'app', 'idr', ['target-agent'], PLATFORMS),
     ('target-gui', 'IDR Target GUI', 'app', 'idr_target_app', ['target-agent'], ['windows-x64']),
-    ('source-cli', 'IDR Source CLI', 'app', 'idr', [], PLATFORMS),
-    ('target-agent', 'IDR Target agent', 'dependency', 'idrt', [], PLATFORMS),
+    ('source-cli', 'IDR Source CLI', 'app', 'idrs', [], PLATFORMS),
+    ('target-agent', 'IDR Target agent', 'dependency', 'idr', [], PLATFORMS),
 ]
 SUMMARIES = {
-    'target-cli': '`idrt`: register this machine as a Target, publish services, approve devices.',
+    'target-cli': '`idr`: register this machine as a Target, publish services, approve devices.',
     'target-gui': 'Desktop app for the Target: sign in, register, services, transfers.',
-    'source-cli': '`idr`: enroll this machine as a Source, connect to Targets, send files.',
+    'source-cli': '`idrs`: enroll this machine as a Source, connect to Targets, send files.',
     'target-agent': 'Background agent that serves this Target. Shared by the Target CLI and GUI.',
 }
 # Downloadable on their own (website "individual apps"): everything they need in one folder.
-STANDALONE = {'target-cli': 'idrt', 'target-gui': 'idr-target-app', 'source-cli': 'idr'}
+STANDALONE = {'target-cli': 'idr', 'target-gui': 'idr-target-app', 'source-cli': 'idrs'}
 
 
 def is_agent(rel: str) -> bool:
@@ -120,7 +120,7 @@ def build(a):
             write_archive(dest, src, part, plat)
             comp['files'][plat] = entry(out, dest)
             if cid in STANDALONE:
-                if part == rels:  # nothing split off (idr): the component is the standalone
+                if part == rels:  # nothing split off (idrs): the component is the standalone
                     alone['files'][plat] = comp['files'][plat]
                 else:
                     sdest = pkg / 'standalone' / f'{STANDALONE[cid]}-{plat}{ext(plat)}'

@@ -1332,9 +1332,9 @@ class IdrTarget {
       );
       return;
     }
-    // The GUI and `idrt` share this Target: only one of them runs its agent.
+    // The GUI and `idr` share this Target: only one of them runs its agent.
     if (await _agentRunningElsewhere()) {
-      idrLog('startAgent: stop — target-agent already running (GUI or idrt)');
+      idrLog('startAgent: stop — target-agent already running (GUI or idr)');
       _setAttention(const IdrTargetAttention(
         code: IdrTargetErrorCode.agentAlreadyRunning,
         message: IdrTargetMessages.agentAlreadyRunning,

@@ -1,4 +1,4 @@
-/// Shared terminal layer for the `idr` (Source) and `idrt` (Target) CLIs:
+/// Shared terminal layer for the `idrs` (Source) and `idr` (Target) CLIs:
 /// global flags, output modes (human / JSON), progress, prompts, error
 /// rendering, exit codes, secret masking and diagnostic checks.
 library;
@@ -31,7 +31,7 @@ abstract final class CliExit {
   /// or the device is not approved yet.
   static const connect = 3;
 
-  /// Subscription missing or expired, or out of seats (`idrt`).
+  /// Subscription missing or expired, or out of seats (`idr`).
   static const billing = 4;
 
   /// Bad configuration or a missing native dependency.
@@ -143,7 +143,7 @@ class Ui {
   void warn(String message) =>
       stderr.writeln('${yellow.wrap('warning:')} $message');
 
-  /// A follow-up command or fix, e.g. `Next: idr connect`.
+  /// A follow-up command or fix, e.g. `Next: idrs connect`.
   void hint(String message) => _out.writeln(darkGray.wrap(message));
 
   void debug(String message) {

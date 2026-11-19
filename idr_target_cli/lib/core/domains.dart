@@ -5,7 +5,7 @@ import 'package:idr_target/idr_target.dart';
 import 'devices.dart';
 import 'target.dart';
 
-/// `idrt <mode> domain add|verify|list|remove` — customer domains CNAME'd to
+/// `idr <mode> domain add|verify|list|remove` — customer domains CNAME'd to
 /// this Target. Billing verifies the CNAME; the agent then gets a Let's
 /// Encrypt certificate on its next start.
 class DomainCommand extends Command<int> {
@@ -50,11 +50,11 @@ List<String> addReport(CustomDomain d) => [
 List<String> checkReport(CustomDomain d) => d.verified
     ? [
         'Verified: ${d.domain} points to this Target.',
-        'Restart `idrt start` so the agent requests its certificate.',
+        'Restart `idr start` so the agent requests its certificate.',
       ]
     : [
         'Not verified yet: ${d.lastError?.message ?? 'not checked yet.'}',
-        'Then run `idrt provider domain verify ${d.domain}`.',
+        'Then run `idr provider domain verify ${d.domain}`.',
       ];
 
 /// One-line certificate state from the agent's `acme-status.json`.
@@ -147,7 +147,7 @@ class _List extends Command<int> {
           human: () {
             if (domains.isEmpty) {
               ui.info('No custom domains. Add one with '
-                  '`idrt provider domain add <domain>`.');
+                  '`idr provider domain add <domain>`.');
             }
             for (final d in domains) {
               ui
@@ -184,7 +184,7 @@ class _Remove extends Command<int> {
         final d = await _billing(() => target.removeCustomDomain(rest.single));
         ui.info(
             'Removed ${d.domain}. It stops routing here within 5 minutes; '
-            'restart `idrt start` to drop its certificate request.');
+            'restart `idr start` to drop its certificate request.');
         return CliExit.ok;
       });
 }

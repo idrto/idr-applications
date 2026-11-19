@@ -7,13 +7,13 @@ import 'package:idr_source/idr_source.dart' show canonicalPresenceFqhn;
 
 import 'source_agent.dart';
 
-/// `idr transfer …`: file transfer owned by the running `source-agent`.
+/// `idrs transfer …`: file transfer owned by the running `source-agent`.
 ///
 /// Each subcommand asks the agent over its local, owner-only IPC by running
 /// `source-agent transfer --json …` (the same contract its own CLI uses), so a
-/// transfer keeps going when this command exits. idr writes the agent's config
+/// transfer keeps going when this command exits. idrs writes the agent's config
 /// and starts it when needed ([ensureSourceAgent]); the binary comes from
-/// `IDR_SOURCE_AGENT`, next to idr, or `PATH`.
+/// `IDR_SOURCE_AGENT`, next to idrs, or `PATH`.
 class TransferCommand extends Command<int> {
   TransferCommand() {
     addSubcommand(_Send());
@@ -135,7 +135,7 @@ class _Plain extends Command<int> {
   final bool takesId;
 
   @override
-  String get invocation => takesId ? 'idr transfer $name <id>' : 'idr transfer $name';
+  String get invocation => takesId ? 'idrs transfer $name <id>' : 'idrs transfer $name';
 
   @override
   Future<int> run() async {
@@ -169,7 +169,7 @@ class _Send extends Command<int> {
     }
     final target = canonicalPresenceFqhn(argResults!['target'] as String);
     if (!target.contains('--')) {
-      usageException('A Target looks like laptop--you@example.com (two hyphens); `idr status` shows yours.');
+      usageException('A Target looks like laptop--you@example.com (two hyphens); `idrs status` shows yours.');
     }
     final data = await agentTransfer([
       'send',
@@ -180,7 +180,7 @@ class _Send extends Command<int> {
     ], target: target);
     ui.result(data, human: () {
       ui.success('Queued ${(data as Map)['id']}.');
-      ui.hint('Follow it with: idr transfer status ${data['id']}');
+      ui.hint('Follow it with: idrs transfer status ${data['id']}');
     });
     return CliExit.ok;
   }
@@ -198,7 +198,7 @@ class _Accept extends Command<int> {
   String get description => 'Accept a pending incoming offer.';
 
   @override
-  String get invocation => 'idr transfer accept <id> [--out <dir>]';
+  String get invocation => 'idrs transfer accept <id> [--out <dir>]';
 
   @override
   Future<int> run() async {

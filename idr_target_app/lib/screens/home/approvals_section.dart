@@ -10,7 +10,7 @@ import '../../ui/components/inputs/idr_fields.dart';
 import '../../ui/components/layout/idr_layout.dart';
 import '../../ui/theme/idr_theme.dart';
 
-/// What a pending request is, in words (same wording as `idrt pending`).
+/// What a pending request is, in words (same wording as `idr pending`).
 String requestLabel(EnrollmentRequest r) => switch (r.kind) {
   'zone_authority' => 'Zone key for ${r.zone}',
   'machine_source' =>
@@ -18,7 +18,7 @@ String requestLabel(EnrollmentRequest r) => switch (r.kind) {
   _ => 'Target ${r.verifiedFqhn ?? r.hostLabel}',
 };
 
-/// Pending enrollments an admin machine reviews (`idrt <mode> pending|approve|reject`).
+/// Pending enrollments an admin machine reviews (`idr <mode> pending|approve|reject`).
 class ApprovalsSection extends StatefulWidget {
   const ApprovalsSection({super.key, required this.controller, this.onChanged});
 
@@ -188,7 +188,7 @@ class _ApprovalsSectionState extends State<ApprovalsSection> {
               title: 'No pending requests',
               description: reg == null
                   ? 'Nobody can enroll yet. Register this machine as a Target first.'
-                  : 'People appear here after they run: idr enroll ${reg.verifiedFqhn.replaceAll('.idr.to', '')}'
+                  : 'People appear here after they run: idrs enroll ${reg.verifiedFqhn.replaceAll('.idr.to', '')}'
                         '${c.plan == IdrBusinessPlan.enterprise ? ' --org <org-slug>' : ''}',
             ),
           ),

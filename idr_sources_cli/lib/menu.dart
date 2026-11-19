@@ -6,7 +6,7 @@ import 'bootstrap.dart';
 import 'commands/transfer.dart';
 import 'prefs/cli_prefs.dart';
 
-/// `idr`'s home menu: only what fits this machine's state. Every entry runs
+/// `idrs`'s home menu: only what fits this machine's state. Every entry runs
 /// an existing command; commands ask for anything still missing.
 Future<Menu> idrMenu() => withSource((source) async {
   final s = source.state;
@@ -33,7 +33,7 @@ Future<Menu> idrMenu() => withSource((source) async {
       if (target != null) 'Target: $target',
       if (enrolled == null)
         'Next step: enroll this machine with a Target, then an admin approves it.',
-      'Zones, approvals and revocation are managed with idrt on the admin '
+      'Zones, approvals and revocation are managed with idr on the admin '
           'machine.',
     ].join('\n'),
     items: <MenuItem>[
@@ -88,7 +88,7 @@ Future<Menu> idrMenu() => withSource((source) async {
   );
 });
 
-/// One path; a folder is sent as a folder. Several files: `idr transfer send`.
+/// One path; a folder is sent as a folder. Several files: `idrs transfer send`.
 List<String> _send(String target) {
   final path = _unquote(ui.ask(
     'File or folder to send',
@@ -110,7 +110,7 @@ String _unquote(String v) {
 }
 
 /// Pending offers to answer, and the full list. Loading asks the Source
-/// agent (idr starts it first when it is not running).
+/// agent (idrs starts it first when it is not running).
 Future<Menu> transfersMenu({String? executable}) async {
   final all = ((await agentTransfer(['list'], executable: executable)) as List)
       .cast<Map<dynamic, dynamic>>();

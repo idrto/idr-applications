@@ -16,9 +16,9 @@ class VersionCommand extends Command<int> {
   Future<int> run() async {
     final dart = Platform.version.split(' ').first;
     ui.result(
-      {'idr': idrVersion, 'idr_source': idrSourceVersion, 'dart': dart},
+      {'idrs': idrVersion, 'idr_source': idrSourceVersion, 'dart': dart},
       human: () => ui.fields(
-          {'idr': idrVersion, 'idr_source': idrSourceVersion, 'dart': dart}),
+          {'idrs': idrVersion, 'idr_source': idrSourceVersion, 'dart': dart}),
     );
     return CliExit.ok;
   }

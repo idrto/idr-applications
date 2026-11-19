@@ -27,7 +27,7 @@ class ConnectCommand extends Command<int> {
       'Connect to a Target via Presence and list the services you may use.';
 
   @override
-  String get invocation => 'idr connect [<target-fqhn>]';
+  String get invocation => 'idrs connect [<target-fqhn>]';
 
   @override
   Future<int> run() => withSource((source) async {
@@ -68,7 +68,7 @@ class ConnectCommand extends Command<int> {
               [for (final svc in s.services) [svc.name, svc.kind]],
             );
             writeAttention(source);
-            ui.hint('\nNext: idr active <service>');
+            ui.hint('\nNext: idrs active <service>');
           },
         );
         return CliExit.ok;

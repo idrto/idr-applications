@@ -24,7 +24,7 @@ Future<T> withSource<T>(Future<T> Function(IdrSource source) body) async {
 void requireSignedIn(IdrSource source) {
   if (source.state.session == null) {
     throw const CliError(CliExit.auth, 'Not signed in.',
-        hint: 'Run `idr login`.', code: 'AUTH_REQUIRED');
+        hint: 'Run `idrs login`.', code: 'AUTH_REQUIRED');
   }
 }
 
@@ -37,11 +37,11 @@ void writeAttention(IdrSource source) {
 const _hints = <(String, String)>[
   (
     'ENROLLMENT_PENDING',
-    'Ask the Target admin to approve it: `idrt` > Pending approvals (or '
-        '`idrt enterprise pending`, then `idrt enterprise approve <id>`). '
-        'Then rerun `idr enroll`.'
+    'Ask the Target admin to approve it: `idr` > Pending approvals (or '
+        '`idr enterprise pending`, then `idr enterprise approve <id>`). '
+        'Then rerun `idrs enroll`.'
   ),
-  ('ENROLLMENT_REJECTED', 'Run `idr enroll` again if that was a mistake.'),
+  ('ENROLLMENT_REJECTED', 'Run `idrs enroll` again if that was a mistake.'),
   ('not a member', 'The org owner adds you under Members in the billing portal.'),
   (
     'ZONE_MISMATCH',
@@ -52,13 +52,13 @@ const _hints = <(String, String)>[
     'Ask the zone admin for the exact zone name, or leave out --zone.'
   ),
   ('NOT_REGISTERED', 'Rerun with --org <slug>.'),
-  ('ENTITY_NOT_FOUND', 'The admin runs `idrt <mode> setup --role admin` first.'),
+  ('ENTITY_NOT_FOUND', 'The admin runs `idr <mode> setup --role admin` first.'),
   (
     'only serves verified',
     'You are enrolled, but Presence sent no verified policy for this session. '
         'Operator: Presence needs PRESENCE_SERVICE_TOKEN (same as billing) and '
         '[auth].session_policy_url; its log shows "source_proof received but '
-        '... not configured" when it is missing. Then `idr disconnect` and retry.'
+        '... not configured" when it is missing. Then `idrs disconnect` and retry.'
   ),
   (
     'policy_denied',
@@ -67,11 +67,11 @@ const _hints = <(String, String)>[
   ),
   (
     'service not allowed',
-    'Use an allowed service (`idr services`), or ask for a policy change.'
+    'Use an allowed service (`idrs services`), or ask for a policy change.'
   ),
   (
     'target_not_registered',
-    'Check the Target runs `idrt start`, then `idr connect <correct-fqhn>`.'
+    'Check the Target runs `idr start`, then `idrs connect <correct-fqhn>`.'
   ),
   (
     'source_unverified',
@@ -85,17 +85,17 @@ const _hints = <(String, String)>[
   (
     'signaling_failed',
     'Presence is unreachable or refused the session: check IDR_DISCOVERY_URL '
-        '(`idr doctor`).'
+        '(`idrs doctor`).'
   ),
-  ('LIBRARY_MISSING', 'Run `idr doctor`; build idr_c_api or set IDR_C_API_LIB.'),
+  ('LIBRARY_MISSING', 'Run `idrs doctor`; build idr_c_api or set IDR_C_API_LIB.'),
   (
     'Failed to load dynamic library',
-    'Run `idr doctor`: a native library is missing or cannot be loaded.'
+    'Run `idrs doctor`: a native library is missing or cannot be loaded.'
   ),
-  ('CRYPTO_UNAVAILABLE', 'Run `idr doctor`; build idr_dp or set IDR_DP_LIB.'),
-  ('401', 'Your session expired: run `idr login --force`.'),
-  ('AUTH', 'Run `idr login` (or `idr login --force` if it expired).'),
-  ('CONNECT_FAILED', 'Run `idr doctor --connect` to see which step fails.'),
+  ('CRYPTO_UNAVAILABLE', 'Run `idrs doctor`; build idr_dp or set IDR_DP_LIB.'),
+  ('401', 'Your session expired: run `idrs login --force`.'),
+  ('AUTH', 'Run `idrs login` (or `idrs login --force` if it expired).'),
+  ('CONNECT_FAILED', 'Run `idrs doctor --connect` to see which step fails.'),
 ];
 
 /// [IdrSourceException] (and unwrapped HTTP errors) → exit code + hint.
@@ -103,7 +103,7 @@ CliError? translateSourceError(Object e) {
   if (e is! IdrSourceException) {
     return '$e'.contains('ClientException')
         ? CliError(CliExit.connect, 'Network error: $e',
-            hint: 'Run `idr doctor`.', code: 'NETWORK')
+            hint: 'Run `idrs doctor`.', code: 'NETWORK')
         : null;
   }
   final text = '${e.code} ${e.message}';

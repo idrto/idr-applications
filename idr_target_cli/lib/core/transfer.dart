@@ -4,7 +4,7 @@ import 'package:idr_target/idr_target.dart';
 
 import 'target.dart';
 
-/// `idrt transfer …`: file transfer owned by the running `target-agent`.
+/// `idr transfer …`: file transfer owned by the running `target-agent`.
 ///
 /// Every subcommand asks the agent over its local, owner-only IPC; a transfer
 /// keeps going when this command exits. Offers wait for `accept` / `reject`
@@ -28,7 +28,7 @@ class TransferCommand extends Command<int> {
 
   @override
   String get description =>
-      'Receive files from Sources and send to them (needs the agent running: `idrt start`).';
+      'Receive files from Sources and send to them (needs the agent running: `idr start`).';
 }
 
 /// The running agent's transfers, from this machine's Target config.
@@ -39,7 +39,7 @@ Future<T> withTransfers<T>(Future<T> Function(TargetTransfers t) body) async {
   } on TargetTransferException catch (e) {
     throw switch (e.kind) {
       'agent_not_running' => const CliError(CliExit.connect, 'target-agent is not running.',
-          hint: 'Start it with: idrt start', code: 'AGENT_NOT_RUNNING'),
+          hint: 'Start it with: idr start', code: 'AGENT_NOT_RUNNING'),
       'agent_missing' => const CliError(CliExit.config, 'target-agent was not found.',
           hint: 'Build it, or set IDR_TARGET_AGENT.', code: 'AGENT_MISSING'),
       final kind => CliError(CliExit.failure, 'target-agent refused: $kind', code: kind.toUpperCase()),
@@ -78,7 +78,7 @@ void _showOne(TargetTransfer t) => ui.result(transferJson(t), human: () {
         'progress': '${t.bytesDone}/${t.bytesTotal} bytes, ${t.filesDone}/${t.filesTotal} files'
             '${t.filesFailed > 0 ? ', ${t.filesFailed} failed' : ''}',
       });
-      if (t.isPending) ui.hint('Decide with: idrt transfer accept ${t.id}  (or reject)');
+      if (t.isPending) ui.hint('Decide with: idr transfer accept ${t.id}  (or reject)');
     });
 
 class _Plain extends Command<int> {
@@ -93,7 +93,7 @@ class _Plain extends Command<int> {
   final bool takesId;
 
   @override
-  String get invocation => takesId ? 'idrt transfer $name <id>' : 'idrt transfer $name';
+  String get invocation => takesId ? 'idr transfer $name <id>' : 'idr transfer $name';
 
   @override
   Future<int> run() async {
@@ -137,7 +137,7 @@ class _Plain extends Command<int> {
 class _Send extends Command<int> {
   _Send() {
     argParser
-      ..addOption('source', abbr: 's', help: 'The Source device SKI (see `idrt transfer peers`).', mandatory: true)
+      ..addOption('source', abbr: 's', help: 'The Source device SKI (see `idr transfer peers`).', mandatory: true)
       ..addMultiOption('file', abbr: 'f', help: 'A file to send (repeat for more).')
       ..addOption('dir', abbr: 'd', help: 'A folder to send.');
   }
@@ -157,7 +157,7 @@ class _Send extends Command<int> {
       final sent = await t.send(argResults!['source'] as String, files: files, dir: dir);
       ui.result(transferJson(sent), human: () {
         ui.success('Queued ${sent.id}.');
-        ui.hint('Follow it with: idrt transfer status ${sent.id}');
+        ui.hint('Follow it with: idr transfer status ${sent.id}');
       });
     });
     return CliExit.ok;
@@ -176,7 +176,7 @@ class _Accept extends Command<int> {
   String get description => 'Accept a pending incoming offer.';
 
   @override
-  String get invocation => 'idrt transfer accept <id> [--out <dir>]';
+  String get invocation => 'idr transfer accept <id> [--out <dir>]';
 
   @override
   Future<int> run() async {

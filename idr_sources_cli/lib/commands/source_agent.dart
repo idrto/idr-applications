@@ -7,8 +7,8 @@ import 'package:idr_source/idr_source.dart'
 
 import '../prefs/cli_prefs.dart';
 
-/// `idr` sets up and runs the Source agent itself, so `idr transfer …` works
-/// right after `idr enroll`:
+/// `idrs` sets up and runs the Source agent itself, so `idrs transfer …` works
+/// right after `idrs enroll`:
 ///
 /// - `<state>/source.toml`: this flavor's Presence, the Targets to keep a
 ///   session with (each one you send to, plus your current Target), and
@@ -46,7 +46,7 @@ String sourceConfigToml({
   String q(String s) => jsonEncode(s);
   final f = IdrFlavor.current;
   return '''
-# Written by idr: rewritten when you send to another Target.
+# Written by idrs: rewritten when you send to another Target.
 # To use your own config instead, set IDR_SOURCE_CONFIG and run source-agent yourself.
 [source]
 source_id = ${q(sourceId)}
@@ -66,7 +66,7 @@ interactive = true
 ''';
 }
 
-/// The config `idr transfer` passes the agent; makes sure the agent runs with
+/// The config `idrs transfer` passes the agent; makes sure the agent runs with
 /// [target] (and the current Target) in its list. See the top of this file.
 Future<String> ensureSourceAgent(String exe, {String? target}) async {
   final env = Platform.environment['IDR_SOURCE_CONFIG']?.trim();
@@ -81,7 +81,7 @@ Future<String> ensureSourceAgent(String exe, {String? target}) async {
   }
   if (targets.isEmpty) {
     throw const CliError(CliExit.config, 'No Target to transfer with yet.',
-        hint: 'Connect to your Target first: idr connect <target-fqhn>', code: 'NO_TARGET');
+        hint: 'Connect to your Target first: idrs connect <target-fqhn>', code: 'NO_TARGET');
   }
   final home = Platform.environment['USERPROFILE'] ?? Platform.environment['HOME'] ?? '.';
   final toml = sourceConfigToml(
@@ -113,11 +113,11 @@ Future<bool> _running(String exe, String cfg) async {
 }
 
 const agentMissing = CliError(CliExit.config, 'source-agent was not found.',
-    hint: 'Reinstall the Source app with IDR Setup (it puts source-agent next to idr), '
+    hint: 'Reinstall the Source app with IDR Setup (it puts source-agent next to idrs), '
         'or set IDR_SOURCE_AGENT to its path.',
     code: 'AGENT_MISSING');
 
-/// Stops the agent idr started (its pid file), so it restarts with new Targets.
+/// Stops the agent idrs started (its pid file), so it restarts with new Targets.
 Future<void> _stop(String exe, String cfg) async {
   final pid = _pidFile.existsSync() ? int.tryParse(_pidFile.readAsStringSync().trim()) : null;
   if (pid != null) Process.killPid(pid);
@@ -130,13 +130,13 @@ Future<void> _stop(String exe, String cfg) async {
       code: 'AGENT_BUSY');
 }
 
-/// This device's approved identity, as `idr enroll` stored it.
+/// This device's approved identity, as `idrs enroll` stored it.
 Future<String> _identityJson() async {
   final raw = await FileAuthStorage().getItem('idr.source.identity');
   final j = raw == null ? null : jsonDecode(raw);
   if (j is! Map || j['credential'] is! Map || (j['credential'] as Map).isEmpty) {
     throw const CliError(CliExit.auth, 'This machine is not an approved Source yet.',
-        hint: 'Run `idr enroll`, and ask the Target admin to approve it.', code: 'NOT_ENROLLED');
+        hint: 'Run `idrs enroll`, and ask the Target admin to approve it.', code: 'NOT_ENROLLED');
   }
   return jsonEncode(Map.of(j)..remove('pull_token'));
 }
@@ -151,7 +151,7 @@ Future<void> _start(String exe, String cfg) async {
   try {
     final Process proc;
     try {
-      // Detached, no pipes: it outlives idr and its terminal; logs go to IDR_LOG_FILE.
+      // Detached, no pipes: it outlives idrs and its terminal; logs go to IDR_LOG_FILE.
       proc = await Process.start(exe, ['--config', cfg, '--identity', idFile.path, 'run'],
           mode: ProcessStartMode.detached, environment: {'IDR_LOG_FILE': agentLogPath});
     } on ProcessException {

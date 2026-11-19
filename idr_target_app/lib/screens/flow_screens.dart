@@ -129,7 +129,7 @@ class SignInScreen extends StatelessWidget {
 }
 
 /// Choose Personal / Enterprise / Service Provider and set it up
-/// (`idrt personal|enterprise|provider setup`).
+/// (`idr personal|enterprise|provider setup`).
 class ModeScreen extends StatefulWidget {
   const ModeScreen({super.key, required this.controller});
 
@@ -481,7 +481,7 @@ class RegisterScreen extends StatelessWidget {
   }
 }
 
-/// Host registration form (`idrt <mode> register <host>`), for every mode.
+/// Host registration form (`idr <mode> register <host>`), for every mode.
 class RegisterForm extends StatefulWidget {
   const RegisterForm({super.key, required this.controller});
 

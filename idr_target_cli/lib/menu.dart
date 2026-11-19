@@ -9,7 +9,7 @@ import 'core/zones.dart';
 import 'modes/enterprise.dart';
 import 'modes/provider.dart';
 
-/// `idrt`'s home menu. It follows the SDK's own next step for this machine
+/// `idr`'s home menu. It follows the SDK's own next step for this machine
 /// and offers only what fits it; every entry runs an existing command, and
 /// commands ask for anything still missing. Billing has the last word on
 /// permissions: entries hidden or explained here are only guidance.
@@ -103,7 +103,7 @@ Future<Menu> idrtMenu() => withTarget((target) async {
           'Waiting for ${org.name} to renew the ${plan.title} plan',
           'The organization has no active ${plan.title} subscription. Only '
               'its owner or an admin can buy it (billing portal); this '
-              'machine picks it up when you open `idrt` afterwards.',
+              'machine picks it up when you open `idr` afterwards.',
         )
       else if (!isCovered(target, plan))
         ('Buy or renew the ${plan.title} plan', () => ['billing'])
@@ -120,10 +120,10 @@ Future<Menu> idrtMenu() => withTarget((target) async {
         explain(
           'Waiting for an admin to approve this machine',
           zone != null
-              ? 'An admin of zone ${zone.zone} approves it in their `idrt` > '
+              ? 'An admin of zone ${zone.zone} approves it in their `idr` > '
                     'Pending approvals.'
-              : 'On the admin machine: `idrt $mode pending`, then '
-                    '`idrt $mode approve` (or use its menu: Pending approvals).',
+              : 'On the admin machine: `idr $mode pending`, then '
+                    '`idr $mode approve` (or use its menu: Pending approvals).',
         )
       else
         ('Start serving (Ctrl+C comes back here)', () => ['start']),
@@ -131,9 +131,9 @@ Future<Menu> idrtMenu() => withTarget((target) async {
         explain(
           'Waiting for the root admin to sign your zone key '
               '(${keyWaiting.join(', ')})',
-          'The root admin approves it in their `idrt` > Pending approvals. '
+          'The root admin approves it in their `idr` > Pending approvals. '
               'Then this machine approves requests for '
-              '${keyWaiting.join(', ')}; it is picked up when you open `idrt`.',
+              '${keyWaiting.join(', ')}; it is picked up when you open `idr`.',
         ),
       submenu(
         'Services on this machine (${target.services.length})',
@@ -305,7 +305,7 @@ Future<Menu> _organizationMenu() => withTarget((target) async {
         explain(
           'Zones (none yet)',
           'No zones yet. The root CA admin machine creates them '
-              '(`idrt enterprise zone add <name>`).',
+              '(`idr enterprise zone add <name>`).',
         ),
       if (owner)
         ('Devices (from billing)', () => ['enterprise', 'devices'])
@@ -345,8 +345,8 @@ List<String> _joinHelp(IdrTarget target, String orgSlug, String zone) {
     'How someone joins zone $zone:',
     '  Target FQHN: $fqhn',
     '  1. Add them to this zone (Add a member, below).',
-    '  2. They run: idr login',
-    '     then:     idr enroll $fqhn --org $orgSlug',
+    '  2. They run: idrs login',
+    '     then:     idrs enroll $fqhn --org $orgSlug',
     '  3. You approve them here (Approve a pending request into this zone).',
   ];
 }

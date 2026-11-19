@@ -1,5 +1,5 @@
 name: idr_cli_core
-description: Shared terminal layer for the idr and idrt CLIs (output, JSON, errors, exit codes, diagnostics, secret masking).
+description: Shared terminal layer for the idrs and idr CLIs (output, JSON, errors, exit codes, diagnostics, secret masking).
 version: 0.1.0
 publish_to: none
 environment:

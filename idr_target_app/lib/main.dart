@@ -41,7 +41,7 @@ class _TargetAppState extends State<TargetApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'idrt',
+      title: 'idr',
       debugShowCheckedModeBanner: false,
       theme: idrTheme(),
       home: ListenableBuilder(

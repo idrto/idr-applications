@@ -4,7 +4,7 @@ import 'package:idr_target/idr_target.dart';
 import 'package:path/path.dart' as p;
 
 /// Billing portal origin for this build's flavor (`IDR_BILLING_PORTAL_URL`).
-/// Same flavor table and env overrides as `idrt` ([IdrFlavor]).
+/// Same flavor table and env overrides as `idr` ([IdrFlavor]).
 String get portalBaseUrl => IdrFlavor.current.billingPortalUrl;
 
 String get agentBinaryName =>

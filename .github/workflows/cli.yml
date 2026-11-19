@@ -1,4 +1,4 @@
-# Build `idr` and `idrt`, wrap them with native bits from
+# Build `idrs` and `idr`, wrap them with native bits from
 # https://github.com/idrto/agent/releases/tag/e2e-latest (e2e branch).
 # Dart FFI packages come from idrto/agent@e2e — no cargo build here.
 #
@@ -35,7 +35,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        cli: [idr, idrt]
+        cli: [idrs, idr]
         # macOS is opt-in (repository variable BUILD_MACOS=true): its runners need
         # macOS Actions minutes, and a job that never gets a runner blocks publish.
         target: ${{ fromJSON(vars.BUILD_MACOS == 'true'
@@ -78,12 +78,12 @@ jobs:
           PLAT: ${{ matrix.target.plat }}
         run: |
           set -euo pipefail
-          if [[ "${CLI}" == idr ]]; then
+          if [[ "${CLI}" == idrs ]]; then
             pkg=applications/apps/idr_sources_cli
-            bin=bin/idr.dart
+            bin=bin/idrs.dart
           else
             pkg=applications/apps/idr_target_cli
-            bin=bin/idrt.dart
+            bin=bin/idr.dart
           fi
           exe="${CLI}"
           [[ "${RUNNER_OS}" == Windows ]] && exe="${CLI}.exe"
@@ -98,9 +98,9 @@ jobs:
           mkdir -p dist/config
           cp -v applications/apps/config/prod.json dist/config/
 
-          if [[ "${CLI}" == idr ]]; then
+          if [[ "${CLI}" == idrs ]]; then
             # Everything the agent repo ships for Source except build-time files
-            # (import .lib, header): idr_c_api (WebRTC), source-agent (`idr transfer`),
+            # (import .lib, header): idr_c_api (WebRTC), source-agent (`idrs transfer`),
             # idr_dp (enroll certificates) and, on Windows, the OpenSSL + VC++ DLLs.
             src="agent-dist/source/${PLAT}"
             for f in "${src}"/*; do
