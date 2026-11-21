@@ -1,6 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
-import '../theme/idr_theme.dart';
+import '../../theme/idr_theme.dart';
 
 enum IdrServiceKind { model, database, http }
 
@@ -38,27 +38,6 @@ class IdrServiceIcon extends StatelessWidget {
         borderRadius: BorderRadius.circular(IdrRadius.md),
       ),
       child: Icon(icon, size: size * 0.47, color: fg),
-    );
-  }
-}
-
-class IdrChip extends StatelessWidget {
-  const IdrChip({super.key, required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: IdrColors.zinc100,
-        borderRadius: BorderRadius.circular(IdrRadius.sm),
-      ),
-      child: Text(
-        label,
-        style: IdrText.body(size: 10, color: IdrColors.zinc600),
-      ),
     );
   }
 }

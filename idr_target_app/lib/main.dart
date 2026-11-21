@@ -4,7 +4,8 @@ import 'package:idr_target/idr_target.dart';
 import 'screens/flow_screens.dart';
 import 'screens/home/home_screen.dart';
 import 'target/target_controller.dart';
-import 'ui/theme/idr_theme.dart';
+
+import 'ui/index.dart'; // Theme used
 
 /// `--flavor dev|staging|prod` picks `config/<name>.json`; without it a
 /// release build is prod and `flutter run` is dev ([IdrFlavor.defaultName]).

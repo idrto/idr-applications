@@ -17,6 +17,7 @@ class IdrSourceConfig {
     this.libraryPath,
     this.insecureDev = false,
     this.sourceRegion = 'local',
+    this.nativeSignIn = true,
   });
 
   final IdrSourceMode mode;
@@ -35,6 +36,10 @@ class IdrSourceConfig {
 
   final String sourceRegion;
 
+  /// Google SSO via Billing's `/api/auth/native/sign-in/social` (see
+  /// [IdrFlavor.nativeSignIn]).
+  final bool nativeSignIn;
+
   String get apiBase => apiBaseUrl.replaceAll(RegExp(r'/$'), '');
 
   /// [flavor]'s billing + discovery URLs; env overrides `IDR_API_BASE_URL`,
@@ -48,6 +53,7 @@ class IdrSourceConfig {
       libraryPath: (envLib != null && envLib.isNotEmpty) ? envLib : null,
       insecureDev: flavor.isDev,
       sourceRegion: flavor.isDev ? 'local' : 'unknown',
+      nativeSignIn: flavor.nativeSignIn,
     );
   }
 }

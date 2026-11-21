@@ -4,13 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:idr_target/idr_target.dart';
 
 import '../../target/native_dialogs.dart';
-import '../../ui/components/buttons/idr_button.dart';
-import '../../ui/components/cards/idr_card.dart';
-import '../../ui/components/dialogs/idr_dialog.dart';
-import '../../ui/components/feedback/idr_feedback.dart';
-import '../../ui/components/inputs/idr_fields.dart';
-import '../../ui/components/layout/idr_layout.dart';
-import '../../ui/theme/idr_theme.dart';
+import '../../ui/index.dart';
 
 /// `1.2 MB` style sizes.
 String formatBytes(int n) {
@@ -26,10 +20,10 @@ String formatBytes(int n) {
 
 /// Confirmed direct, relayed, or unknown (never guessed as direct).
 String connectionLabel(TargetTransfer t) => switch (t.connection) {
-      'relayed' => 'Relayed',
-      'direct' => 'Direct',
-      _ => 'Unknown',
-    };
+  'relayed' => 'Relayed',
+  'direct' => 'Direct',
+  _ => 'Unknown',
+};
 
 /// Files from verified Sources: offers waiting for a decision, then all transfers.
 /// The agent owns the transfers; this screen only watches and commands them.
@@ -45,6 +39,7 @@ class TransfersSection extends StatefulWidget {
 class _TransfersSectionState extends State<TransfersSection> {
   StreamSubscription<List<TargetTransfer>>? _sub;
   List<TargetTransfer>? _all;
+
   /// Agent unavailable (cleared by the next successful refresh).
   String? _error;
 
@@ -79,9 +74,11 @@ class _TransfersSectionState extends State<TransfersSection> {
       _show(await widget.transfers.list());
     } on TargetTransferException catch (e) {
       if (mounted) {
-        setState(() => _error = e.kind == 'agent_not_running'
-            ? 'The agent is not running. Start the Target to receive files.'
-            : 'Transfers unavailable (${e.kind}).');
+        setState(
+          () => _error = e.kind == 'agent_not_running'
+              ? 'The agent is not running. Start the Target to receive files.'
+              : 'Transfers unavailable (${e.kind}).',
+        );
       }
     }
   }
@@ -102,12 +99,14 @@ class _TransfersSectionState extends State<TransfersSection> {
   }
 
   static String _explain(TargetTransferException e) => switch (e.kind) {
-        'unauthorized' => 'That folder is not allowed. Choose a folder inside your home folder.',
-        'agent_not_running' => 'The agent is not running. Start the Target first.',
-        'agent_untrusted' => 'Refused: the agent connection is owned by another Windows user.',
-        'invalid_argument' => 'That file or folder no longer exists.',
-        final k => 'Refused: $k',
-      };
+    'unauthorized' =>
+      'That folder is not allowed. Choose a folder inside your home folder.',
+    'agent_not_running' => 'The agent is not running. Start the Target first.',
+    'agent_untrusted' =>
+      'Refused: the agent connection is owned by another Windows user.',
+    'invalid_argument' => 'That file or folder no longer exists.',
+    final k => 'Refused: $k',
+  };
 
   /// Accept into a folder the user picks (the agent checks it is permitted).
   Future<void> _acceptTo(TargetTransfer t) async {
@@ -127,7 +126,9 @@ class _TransfersSectionState extends State<TransfersSection> {
     }
     if (!mounted) return;
     if (peers.isEmpty) {
-      setState(() => _notice = 'No Source is connected right now. A Source appears here while it has a session with this Target.');
+      setState(
+        () => _notice = 'No Source is connected right now. A Source appears here while it has a session with this Target.',
+      );
       return;
     }
     var ski = peers.first.ski;
@@ -144,7 +145,15 @@ class _TransfersSectionState extends State<TransfersSection> {
                 value: ski,
                 options: [
                   for (final p in peers)
-                    IdrOption(value: p.ski, label: '${p.ski} · ${p.connection == 'relayed' ? 'Relayed' : p.connection == 'direct' ? 'Direct' : 'Unknown'}'),
+                    IdrOption(
+                      value: p.ski,
+                      label:
+                          '${p.ski} · ${p.connection == 'relayed'
+                              ? 'Relayed'
+                              : p.connection == 'direct'
+                              ? 'Direct'
+                              : 'Unknown'}',
+                    ),
                 ],
                 onChanged: (v) => setLocal(() => ski = v),
               ),
@@ -153,7 +162,10 @@ class _TransfersSectionState extends State<TransfersSection> {
             Row(
               children: [
                 Expanded(
-                  child: IdrButton(label: 'Choose files…', onPressed: () => Navigator.of(ctx).pop('files')),
+                  child: IdrButton(
+                    label: 'Choose files…',
+                    onPressed: () => Navigator.of(ctx).pop('files'),
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -170,10 +182,17 @@ class _TransfersSectionState extends State<TransfersSection> {
       ),
     );
     if (what == null) return;
-    final files = what == 'files' ? NativeDialogs.pickFiles(title: 'Files to send') : null;
-    final dir = what == 'folder' ? NativeDialogs.pickFolder(title: 'Folder to send') : null;
+    final files = what == 'files'
+        ? NativeDialogs.pickFiles(title: 'Files to send')
+        : null;
+    final dir = what == 'folder'
+        ? NativeDialogs.pickFolder(title: 'Folder to send')
+        : null;
     if (files == null && dir == null) return;
-    await _do('send', () => widget.transfers.send(ski, files: files ?? const [], dir: dir));
+    await _do(
+      'send',
+      () => widget.transfers.send(ski, files: files ?? const [], dir: dir),
+    );
   }
 
   Widget _offer(TargetTransfer t) {
@@ -199,7 +218,9 @@ class _TransfersSectionState extends State<TransfersSection> {
                 label: 'Reject',
                 variant: IdrButtonVariant.destructive,
                 size: IdrButtonSize.sm,
-                onPressed: busy ? null : () => _do(t.id, () => widget.transfers.reject(t.id)),
+                onPressed: busy
+                    ? null
+                    : () => _do(t.id, () => widget.transfers.reject(t.id)),
               ),
               if (NativeDialogs.available) ...[
                 const SizedBox(width: 8),
@@ -215,7 +236,9 @@ class _TransfersSectionState extends State<TransfersSection> {
                 variant: IdrButtonVariant.primary,
                 size: IdrButtonSize.sm,
                 loading: busy,
-                onPressed: busy ? null : () => _do(t.id, () => widget.transfers.accept(t.id)),
+                onPressed: busy
+                    ? null
+                    : () => _do(t.id, () => widget.transfers.accept(t.id)),
               ),
             ],
           ),
@@ -234,20 +257,26 @@ class _TransfersSectionState extends State<TransfersSection> {
           IdrButton(
             label: 'Resume',
             size: IdrButtonSize.xs,
-            onPressed: busy ? null : () => _do(t.id, () => widget.transfers.resume(t.id)),
+            onPressed: busy
+                ? null
+                : () => _do(t.id, () => widget.transfers.resume(t.id)),
           )
         else
           IdrButton(
             label: 'Pause',
             size: IdrButtonSize.xs,
-            onPressed: busy ? null : () => _do(t.id, () => widget.transfers.pause(t.id)),
+            onPressed: busy
+                ? null
+                : () => _do(t.id, () => widget.transfers.pause(t.id)),
           ),
         const SizedBox(width: 6),
         IdrButton(
           label: 'Cancel',
           size: IdrButtonSize.xs,
           variant: IdrButtonVariant.destructive,
-          onPressed: busy ? null : () => _do(t.id, () => widget.transfers.cancel(t.id)),
+          onPressed: busy
+              ? null
+              : () => _do(t.id, () => widget.transfers.cancel(t.id)),
         ),
       ],
     );
@@ -285,8 +314,10 @@ class _TransfersSectionState extends State<TransfersSection> {
             ],
           ),
         ),
-        if (_error != null) IdrAlert(tone: IdrTone.warning, title: 'Transfers', message: _error),
-        if (_notice != null) IdrAlert(tone: IdrTone.error, title: 'Not done', message: _notice),
+        if (_error != null)
+          IdrAlert(tone: IdrTone.warning, title: 'Transfers', message: _error),
+        if (_notice != null)
+          IdrAlert(tone: IdrTone.error, title: 'Not done', message: _notice),
         for (final t in offers) ...[_offer(t), const SizedBox(height: 12)],
         if (all != null && all.isEmpty)
           const IdrCard(
@@ -299,31 +330,46 @@ class _TransfersSectionState extends State<TransfersSection> {
         if (rest.isNotEmpty)
           IdrCard(
             child: IdrTable(
-              columns: const ['What', 'Direction', 'State', 'Progress', 'Connection', ''],
+              columns: const [
+                'What',
+                'Direction',
+                'State',
+                'Progress',
+                'Connection',
+                '',
+              ],
               rows: [
                 for (final t in rest)
-                  IdrTableRow(cells: [
-                    Text(t.contents),
-                    Text(t.incoming ? 'Received' : 'Sent'),
-                    Text(t.state),
-                    SizedBox(
-                      width: 140,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          LinearProgressIndicator(value: t.fraction),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${formatBytes(t.bytesDone)} / ${formatBytes(t.bytesTotal)}'
-                            '${t.filesFailed > 0 ? ' · ${t.filesFailed} failed' : ''}',
-                            style: IdrText.body(size: 11, color: IdrColors.zinc500),
-                          ),
-                        ],
+                  IdrTableRow(
+                    cells: [
+                      Text(t.contents),
+                      Text(t.incoming ? 'Received' : 'Sent'),
+                      Text(t.state),
+                      SizedBox(
+                        width: 140,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            LinearProgressIndicator(value: t.fraction),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${formatBytes(t.bytesDone)} / ${formatBytes(t.bytesTotal)}'
+                              '${t.filesFailed > 0 ? ' · ${t.filesFailed} failed' : ''}',
+                              style: IdrText.body(
+                                size: 11,
+                                color: IdrColors.zinc500,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    Text(connectionLabel(t)),
-                    Align(alignment: Alignment.centerRight, child: _actions(t)),
-                  ]),
+                      Text(connectionLabel(t)),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: _actions(t),
+                      ),
+                    ],
+                  ),
               ],
             ),
           ),

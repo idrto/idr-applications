@@ -47,6 +47,7 @@ IdrTargetConfig buildConfig() => IdrTargetConfig(
   mode: IdrFlavor.current.isDev
       ? IdrTargetMode.development
       : IdrTargetMode.production,
+  nativeSignIn: IdrFlavor.current.nativeSignIn,
   // "Accept to…" may pick any folder under the user's home (the user chose it
   // in the native dialog); the agent re-checks every choice, links included.
   fileTransfer: IdrFileTransferConfig(permittedDirs: [?_home]),

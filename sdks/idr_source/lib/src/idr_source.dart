@@ -36,8 +36,7 @@ class IdrSource {
           storagePrefix: storagePrefix,
           storage: storage,
           sessionLauncher: loopback.call,
-          nativeSignIn:
-              true, // GET /api/auth/native/sign-in/social, no proxy link
+          nativeSignIn: config.nativeSignIn,
         );
     _authClient.setOnline(false);
     _auth = AuthManager(

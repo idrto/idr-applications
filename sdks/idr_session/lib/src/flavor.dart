@@ -15,6 +15,7 @@ class IdrFlavor {
     this.discovery,
     this.billingPortal,
     this.isDev = false,
+    this.nativeSignIn = true,
   });
 
   /// `prod`, `dev`, `staging`, … (the config file's name).
@@ -25,6 +26,11 @@ class IdrFlavor {
 
   /// Local stack: development mode, insecure Presence, Let's Encrypt staging.
   final bool isDev;
+
+  /// Google SSO opens Billing's `GET /api/auth/native/sign-in/social` (needs
+  /// `@2key/auth-native` with that endpoint) instead of the proxy link that
+  /// Chrome's phishing check flags. Defaults to true when the file omits it.
+  final bool nativeSignIn;
 
   /// The flavor this process runs. Set by [init]; before that (tests) a prod
   /// flavor with no URLs, so anything needing one fails loudly.
@@ -85,6 +91,7 @@ class IdrFlavor {
         discovery: j['discovery'] as String?,
         billingPortal: j['billingPortal'] as String?,
         isDev: j['dev'] == true,
+        nativeSignIn: j['nativeSignIn'] as bool? ?? true,
       );
 
   /// Billing / control plane API base (env: `IDR_CONTROL_PLANE_URL`, or

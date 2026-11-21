@@ -151,9 +151,13 @@ class _BarButton extends StatelessWidget {
 }
 
 class IdrTag extends StatelessWidget {
-  const IdrTag({super.key, required this.label});
+  const IdrTag({super.key, required this.label, this.caps = true});
 
   final String label;
+
+  /// Uppercase, semibold, muted label. When false, renders [label] as-is in
+  /// regular weight (e.g. a service type badge).
+  final bool caps;
 
   @override
   Widget build(BuildContext context) {
@@ -164,13 +168,15 @@ class IdrTag extends StatelessWidget {
         borderRadius: BorderRadius.circular(IdrRadius.sm),
       ),
       child: Text(
-        label.toUpperCase(),
-        style: IdrText.body(
-          size: 10,
-          weight: FontWeight.w600,
-          color: IdrColors.zinc400,
-          letterSpacing: 0.4,
-        ),
+        caps ? label.toUpperCase() : label,
+        style: caps
+            ? IdrText.body(
+                size: 10,
+                weight: FontWeight.w600,
+                color: IdrColors.zinc400,
+                letterSpacing: 0.4,
+              )
+            : IdrText.body(size: 10, color: IdrColors.zinc600),
       ),
     );
   }

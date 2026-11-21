@@ -2,5 +2,6 @@
   "controlPlane": null,
   "discovery": null,
   "billingPortal": null,
-  "dev": false
+  "dev": false,
+  "nativeSignIn": true
 }

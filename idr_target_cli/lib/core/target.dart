@@ -54,6 +54,7 @@ IdrTarget createTarget() {
       mode: IdrFlavor.current.isDev
           ? IdrTargetMode.development
           : IdrTargetMode.production,
+      nativeSignIn: IdrFlavor.current.nativeSignIn,
       // Agent files in the SDK default dir, shared with the GUI: one Target per
       // machine, and only one app runs its agent at a time.
     ),

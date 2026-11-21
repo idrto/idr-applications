@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -99,11 +100,13 @@ void main() {
         expiresAt: DateTime.now().toUtc().add(const Duration(hours: 1)),
       );
       final received = <EntitlementToken>[];
+      final refreshed = Completer<void>();
       final refresher = TokenRefresher(
         client: client,
         mint: () async => next,
         onRefreshed: (token) async {
           received.add(token);
+          refreshed.complete();
         },
       );
       refresher.start(
@@ -112,7 +115,8 @@ void main() {
           expiresAt: DateTime.now().toUtc().subtract(const Duration(minutes: 1)),
         ),
       );
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      // Expired tokens have a 15s retry floor; wait for the actual callback.
+      await refreshed.future.timeout(const Duration(seconds: 20));
       refresher.stop();
       expect(received, hasLength(1));
       expect(received.single.token, 'fresh-jwt');

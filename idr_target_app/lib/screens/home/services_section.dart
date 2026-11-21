@@ -2,14 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:idr_target/idr_target.dart';
 
 import '../../target/target_controller.dart';
-import '../../ui/components/buttons/idr_button.dart';
-import '../../ui/components/cards/idr_card.dart';
-import '../../ui/components/dialogs/idr_dialog.dart';
-import '../../ui/components/feedback/idr_feedback.dart';
-import '../../ui/components/inputs/idr_fields.dart';
-import '../../ui/components/layout/idr_layout.dart';
-import '../../ui/idr/idr_service.dart';
-import '../../ui/theme/idr_theme.dart';
+import '../../ui/index.dart';
 
 class ServicesSection extends StatelessWidget {
   const ServicesSection({super.key, required this.controller});
@@ -85,7 +78,7 @@ class ServicesSection extends StatelessWidget {
                           children: [
                             Text(s.name, style: IdrText.display(size: 14)),
                             const SizedBox(width: 8),
-                            IdrChip(label: s.type.toUpperCase()),
+                            IdrTag(label: s.type.toUpperCase(), caps: false),
                           ],
                         ),
                         const SizedBox(height: 2),

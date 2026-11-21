@@ -2,14 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:idr_target/idr_target.dart';
 
 import '../../target/target_controller.dart';
-import '../../ui/components/buttons/idr_button.dart';
-import '../../ui/components/cards/idr_card.dart';
-import '../../ui/components/dialogs/idr_dialog.dart';
-import '../../ui/components/feedback/idr_feedback.dart';
-import '../../ui/components/inputs/idr_fields.dart';
-import '../../ui/components/layout/idr_layout.dart';
-import '../../ui/components/status/idr_status.dart';
-import '../../ui/theme/idr_theme.dart';
+import '../../ui/index.dart';
 import '../../widgets/common.dart';
 
 /// Enterprise org: zones (+ access policy, revoke), members, issued devices.

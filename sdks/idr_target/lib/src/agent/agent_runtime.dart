@@ -117,8 +117,8 @@ class AgentRuntime {
       await File(dpIdentityPath).writeAsString(dpIdentityJson);
     }
 
-    final acmeDomains =
-        await customDomains?.call(verifiedFqhn) ?? const <String>[];
+    final acmeDomains = await idrTimed('custom_domains', () async =>
+        await customDomains?.call(verifiedFqhn) ?? const <String>[]);
     final writer = TomlWriter(
       fqhn: verifiedFqhn,
       agentRegion: config.agentRegion,
@@ -146,7 +146,7 @@ class AgentRuntime {
       fileTransferInteractive: config.fileTransfer.interactive,
       fileTransferPermittedDirs: config.fileTransfer.permittedDirs,
     );
-    final toml = await writer.writeTo(dir);
+    final toml = await idrTimed('config_write', () => writer.writeTo(dir));
     _configPath = toml.path;
     idrLog(
       'agent: writing ${toml.path} fqhn=$verifiedFqhn '
@@ -162,12 +162,12 @@ class AgentRuntime {
         }
       });
     }
-    await _process!.start(
+    await idrTimed('process_spawn', () => _process!.start(
       binaryPath: config.agentBinaryPath,
       configPath: toml.path,
       workingDirectory: dir.path,
       injectEnv: injectEnv,
-    );
+    ));
     idrLog('agent: process started binary=${config.agentBinaryPath}');
 
     final backoff = Backoff(

@@ -1,3 +1,5 @@
+import 'package:http/http.dart' as http;
+
 import '../auth/auth.dart';
 import '../crypto/idr_crypto.dart';
 import 'agent_token_client.dart';
@@ -9,11 +11,14 @@ class EntitlementManager {
     required this.apiBaseUrl,
     required this.store,
     required IdrCrypto Function() requireCrypto,
-  }) : _requireCrypto = requireCrypto;
+    http.Client? httpClient,
+  })  : _requireCrypto = requireCrypto,
+        _httpClient = httpClient;
 
   final String apiBaseUrl;
   final SessionStore store;
   final IdrCrypto Function() _requireCrypto;
+  final http.Client? _httpClient;
 
   AgentTokenClient? _client;
   TokenRefresher? _refresher;
@@ -24,6 +29,7 @@ class EntitlementManager {
       apiBaseUrl: apiBaseUrl,
       store: store,
       crypto: crypto,
+      httpClient: _httpClient,
     );
     return _client!;
   }

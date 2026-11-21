@@ -6,13 +6,7 @@ import 'package:idr_target/idr_target.dart';
 
 import '../../target/target_controller.dart';
 import '../../target/target_env.dart';
-import '../../ui/components/buttons/idr_button.dart';
-import '../../ui/components/cards/idr_card.dart';
-import '../../ui/components/feedback/idr_feedback.dart';
-import '../../ui/components/layout/idr_layout.dart';
-import '../../ui/components/status/idr_status.dart';
-import '../../ui/idr_dashboard.dart';
-import '../../ui/theme/idr_theme.dart';
+import '../../ui/index.dart';
 import '../../widgets/common.dart';
 import '../flow_screens.dart';
 import 'approvals_section.dart';

@@ -87,6 +87,7 @@ class IdrTargetConfig {
     this.agentRestartInitialDelay = const Duration(seconds: 1),
     this.agentRestartMaxDelay = const Duration(seconds: 30),
     this.fileTransfer = const IdrFileTransferConfig(),
+    this.nativeSignIn = true,
   })  : controlPlaneUrl = controlPlaneUrl ??
             apiBaseUrl ??
             billingBaseUrl ??
@@ -125,6 +126,10 @@ class IdrTargetConfig {
   final String tlsUpstream;
   final bool insecureDev;
   final IdrTlsConfig tls;
+
+  /// Google SSO via Billing's `/api/auth/native/sign-in/social` (see
+  /// [IdrFlavor.nativeSignIn]).
+  final bool nativeSignIn;
 
   /// Override config dir; default `%APPDATA%/idr.to/target/idr_target` on Windows.
   final String? configDirectory;

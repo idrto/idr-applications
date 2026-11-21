@@ -21,10 +21,14 @@ class AuthManager {
 
   IdrLoginOptions? loginOptions;
 
-  /// Cached session; refreshed from the live Better Auth session when possible.
+  /// Reuse an unexpired API token; refresh expired/legacy sessions from Auth.
+  /// Billing still validates the token and subscription on startup.
   Future<IdrAuthSession?> restore() async {
     final saved = await _store.loadSession();
     if (saved == null) return null;
+    if (saved.accessExpiresAt != null && !saved.accessTokenLikelyExpired) {
+      return saved;
+    }
     try {
       return await _mint() ?? saved;
     } catch (_) {

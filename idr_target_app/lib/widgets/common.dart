@@ -2,11 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
 import '../target/target_controller.dart';
-import '../ui/components/buttons/idr_button.dart';
-import '../ui/components/cards/idr_card.dart';
-import '../ui/components/feedback/idr_feedback.dart';
-import '../ui/components/layout/idr_layout.dart';
-import '../ui/theme/idr_theme.dart';
+import '../ui/index.dart';
 
 /// Full-screen shell for pre-home screens (sign-in, setup, billing, register).
 class FlowScaffold extends StatelessWidget {

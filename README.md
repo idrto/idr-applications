@@ -94,7 +94,7 @@ flutter run -d windows -a --flavor=dev
 | `staging` | not set yet: pass the env vars below | `%APPDATA%\idr.to\source-staging`, `%APPDATA%\idr.to\target-staging` |
 | `dev` | `127.0.0.1:3000`, `127.0.0.1:8081`, portal `localhost:5173` | `%APPDATA%\idr.to\source-dev`, `%APPDATA%\idr.to\target-dev` |
 
-`config/` is looked up next to the executable first (CI ships only `config/prod.json` there), then upward from the working directory, so a repo checkout finds `applications/apps/config/`. Keys: `controlPlane`, `discovery`, `billingPortal`, `dev` (local stack: development mode, insecure Presence). For one run, `IDR_CONTROL_PLANE_URL` (`IDR_API_BASE_URL` for `idrs`), `IDR_DISCOVERY_URL` and `IDR_BILLING_PORTAL_URL` override the file; a flavor with no URL and no env var stops with an error naming the variable.
+`config/` is looked up next to the executable first (CI ships only `config/prod.json` there), then upward from the working directory, so a repo checkout finds `applications/apps/config/`. Keys: `controlPlane`, `discovery`, `billingPortal`, `dev` (local stack: development mode, insecure Presence), `nativeSignIn` (Google sign-in opens Billing's `/api/auth/native/sign-in/social`, which avoids Chrome's phishing warning but needs a Billing with that endpoint; `true` when omitted, `false` in `dev.json`). For one run, `IDR_CONTROL_PLANE_URL` (`IDR_API_BASE_URL` for `idrs`), `IDR_DISCOVERY_URL` and `IDR_BILLING_PORTAL_URL` override the file; a flavor with no URL and no env var stops with an error naming the variable.
 
 ## Build and distribute
 

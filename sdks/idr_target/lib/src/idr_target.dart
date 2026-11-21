@@ -62,6 +62,9 @@ class IdrTarget {
   })  : _store = store ?? SessionStore(),
         _crypto = crypto,
         _openUrl = openUrl ?? LoopbackAuthSessionLauncher.openSystemBrowser {
+    // All control-plane API clients share connections and one owned lifetime.
+    _apiHttp = httpClient ?? http.Client();
+    _ownsApiHttp = httpClient == null;
     final launcher = LoopbackAuthSessionLauncher(openBrowser: _openUrl);
     _authClient = authClient ??
         BillingAuthClient(
@@ -71,7 +74,7 @@ class IdrTarget {
           storage: _store.storage,
           sessionLauncher: launcher.call,
           httpClient: httpClient,
-          nativeSignIn: true, // GET /api/auth/native/sign-in/social, no proxy link
+          nativeSignIn: config.nativeSignIn,
         );
     _authClient.setOnline(false);
     _auth = AuthManager(client: _authClient, store: _store, launcher: launcher);
@@ -79,15 +82,15 @@ class IdrTarget {
     _registrationClient = RegistrationClient(
       controlPlaneUrl: config.controlPlaneBase,
       store: _store,
-      httpClient: httpClient,
+      httpClient: _apiHttp,
     );
     _enrollClient = EnrollClient(
       controlPlaneUrl: config.controlPlaneBase,
-      httpClient: httpClient,
+      httpClient: _apiHttp,
     );
     _customDomainClient = CustomDomainClient(
       controlPlaneUrl: config.controlPlaneBase,
-      httpClient: httpClient,
+      httpClient: _apiHttp,
     );
 
     _enrollment = EnrollmentManager(
@@ -116,11 +119,12 @@ class IdrTarget {
       apiBaseUrl: config.controlPlaneBase,
       store: _store,
       requireCrypto: _requireCrypto,
+      httpClient: _apiHttp,
     );
     _commerce = billingCommerce ??
         BillingCommerceClient(
           apiBaseUrl: config.controlPlaneBase,
-          httpClient: httpClient,
+          httpClient: _apiHttp,
         );
     _services = ServicesManager(
       store: _store,
@@ -158,6 +162,8 @@ class IdrTarget {
 
   final IdrTargetConfig config;
   final SessionStore _store;
+  late final http.Client _apiHttp;
+  late final bool _ownsApiHttp;
   IdrCrypto? _crypto;
   late final BillingAuthClient _authClient;
   late final DpIdentityStore _identity;
@@ -572,6 +578,7 @@ class IdrTarget {
   ///
   /// [launchAgent] false restores and hydrates state only (CLI read commands).
   Future<void> start({bool launchAgent = true}) async {
+    final startupClock = Stopwatch()..start();
     _setStatus(IdrTargetStatus.initializing);
     _setAttention(null);
     idrLog(
@@ -585,7 +592,7 @@ class IdrTarget {
       await _services.load();
       await _enterpriseOrg.load();
       _publishState();
-      _authSession = await _auth.restore();
+      _authSession = await idrTimed('auth_restore', _auth.restore);
       if (_authSession == null) {
         idrLog('start: stop — no auth session (Presence not started)');
         _setStatus(IdrTargetStatus.signedOut);
@@ -595,9 +602,9 @@ class IdrTarget {
         ));
         return;
       }
-      await hydrateSubscription();
+      await idrTimed('subscription', hydrateSubscription);
       if (_authSession == null) return;
-      _registrationState = await _registration.load();
+      _registrationState = await idrTimed('registration_load', _registration.load);
       if (_registrationState == null) {
         idrLog('start: stop — no host registration (Presence not started)');
         // Admin-only Ready is gated by [TargetReadyStep]; do not fake agent running.
@@ -620,7 +627,7 @@ class IdrTarget {
         _setStatus(IdrTargetStatus.stopped);
         return;
       }
-      await _continueAfterRegistration();
+      await idrTimed('agent_prepare', _continueAfterRegistration);
       idrLog(
         'start: done status=$_status agent=$_agentStatus '
         'attention=${_attention?.code.wire}',
@@ -634,6 +641,9 @@ class IdrTarget {
         fallbackCode: IdrTargetErrorCode.configInvalid,
         context: 'startup',
       ));
+    } finally {
+      idrLog('timing phase=startup elapsed_ms=${startupClock.elapsedMilliseconds} '
+          'launch_agent=$launchAgent status=${_status.name}');
     }
   }
 
@@ -1479,6 +1489,7 @@ class IdrTarget {
     await stop();
     await _agent.dispose();
     await _authClient.dispose();
+    if (_ownsApiHttp) _apiHttp.close();
     await _statusCtrl.close();
     await _attentionCtrl.close();
     await _tlsCtrl.close();

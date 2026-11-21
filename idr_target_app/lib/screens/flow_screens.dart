@@ -2,13 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:idr_target/idr_target.dart';
 
 import '../target/target_controller.dart';
-import '../ui/components/buttons/idr_button.dart';
-import '../ui/components/cards/idr_card.dart';
-import '../ui/components/feedback/idr_feedback.dart';
-import '../ui/components/inputs/idr_fields.dart';
-import '../ui/components/layout/idr_layout.dart';
-import '../ui/idr_dashboard.dart';
-import '../ui/theme/idr_theme.dart';
+import '../ui/index.dart';
 import '../widgets/common.dart';
 
 const _steps = ['Sign in', 'Mode', 'Billing', 'Register'];

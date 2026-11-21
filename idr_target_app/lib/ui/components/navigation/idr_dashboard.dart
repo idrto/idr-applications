@@ -1,8 +1,8 @@
 import 'package:material_ui/material_ui.dart';
 
-import 'components/layout/idr_layout.dart';
-import 'components/navigation/idr_nav.dart';
-import 'theme/idr_theme.dart';
+import '../../theme/idr_theme.dart';
+import '../layout/idr_layout.dart';
+import 'idr_nav.dart';
 
 class IdrDashItem {
   const IdrDashItem(this.id, this.label, this.icon, {this.badge});
