@@ -1,3 +1,4 @@
+import 'package:idr_session/idr_session.dart' show httpFailure;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -104,7 +105,7 @@ class SourceIdentityManager {
         }
         throw IdrSourceException(
           code: e.statusCode == 404 ? 'ENTITY_NOT_FOUND' : 'ENROLL_FAILED',
-          message: 'Source enroll failed (${e.statusCode}): ${e.body}',
+          message: httpFailure('Source enroll', e.statusCode, e.body),
           cause: e,
         );
       }

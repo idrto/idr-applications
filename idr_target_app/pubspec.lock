@@ -307,6 +307,20 @@ packages:
       relative: true
     source: path
     version: "0.1.0"
+  idr_telemetry:
+    dependency: "direct main"
+    description:
+      path: "../../../agents_engine/agent/packages/idr_telemetry"
+      relative: true
+    source: path
+    version: "0.1.0"
+  idr_telemetry_flutter:
+    dependency: "direct main"
+    description:
+      path: "../../../agents_engine/agent/packages/idr_telemetry_flutter"
+      relative: true
+    source: path
+    version: "0.1.0"
   image:
     dependency: transitive
     description:

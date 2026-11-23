@@ -9,6 +9,7 @@ import 'catalog/service_selection.dart';
 import 'config.dart';
 import 'connection/connection_manager.dart';
 import 'errors.dart';
+import 'identity/presence_source_id.dart';
 import 'identity/source_identity_manager.dart';
 import 'library_path.dart';
 import 'prefs/source_prefs.dart';
@@ -278,11 +279,12 @@ class IdrSource {
     try {
       // Approved machine_source identity → mTLS; otherwise bearer-only
       // (anonymous Source, Service Provider targets).
+      final dpIdentityJson = await _identity.approvedIdentityJson();
       await _connection.connect(
         authToken: token,
-        sourceId: session.email.isNotEmpty ? session.email : 'dart',
+        sourceId: presenceSourceId(dpIdentityJson), // device ski, never the email (D9)
         fqhn: target,
-        dpIdentityJson: await _identity.approvedIdentityJson(),
+        dpIdentityJson: dpIdentityJson,
       );
       final connectedFqhn = _connection.fqhn ?? target;
       await _prefs?.setLastFqhn(connectedFqhn);

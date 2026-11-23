@@ -2,6 +2,7 @@ import 'package:two_key_dart_sdk/two_key_headless.dart';
 
 export 'src/file_auth_storage.dart';
 export 'src/flavor.dart';
+export 'src/http_failure.dart';
 
 /// Billing API JWT plus the Better Auth cookie, shared by Source and Target.
 class IdrAuthSession {

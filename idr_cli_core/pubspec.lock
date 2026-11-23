@@ -168,6 +168,13 @@ packages:
       relative: true
     source: path
     version: "0.2.0"
+  idr_telemetry:
+    dependency: "direct main"
+    description:
+      path: "../../../agents_engine/agent/packages/idr_telemetry"
+      relative: true
+    source: path
+    version: "0.1.0"
   io:
     dependency: transitive
     description:

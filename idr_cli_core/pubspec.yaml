@@ -9,6 +9,8 @@ dependencies:
   cli_completion: ^0.6.0
   idr_dp_ffi:
     path: ../../../agents_engine/agent/packages/idr_dp_ffi
+  idr_telemetry:
+    path: ../../../agents_engine/agent/packages/idr_telemetry
   mason_logger: ^0.3.6
 dev_dependencies:
   lints: ^4.0.0

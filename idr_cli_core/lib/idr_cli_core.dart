@@ -3,6 +3,8 @@
 /// rendering, exit codes, secret masking and diagnostic checks.
 library;
 
+export 'src/telemetry_run.dart' show runCliWithTelemetry;
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi';

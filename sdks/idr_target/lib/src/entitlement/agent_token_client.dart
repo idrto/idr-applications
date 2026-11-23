@@ -1,3 +1,4 @@
+import 'package:idr_session/idr_session.dart' show httpFailure;
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -89,7 +90,7 @@ class AgentTokenClient {
     );
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw StateError(
-        'agent/token failed (${res.statusCode}): ${res.body}',
+        httpFailure('agent/token', res.statusCode, res.body),
       );
     }
     final body = jsonDecode(res.body) as Map<String, dynamic>;

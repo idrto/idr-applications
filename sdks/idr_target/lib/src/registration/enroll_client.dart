@@ -1,5 +1,6 @@
 ﻿import 'dart:convert';
 
+import 'package:idr_session/idr_session.dart' show httpFailure;
 import 'package:http/http.dart' as http;
 
 import '../auth/auth.dart';
@@ -50,7 +51,7 @@ class EnrollClient {
     }
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw StateError(
-        'kickstart-entity failed (${res.statusCode}): ${res.body}',
+        httpFailure('kickstart-entity', res.statusCode, res.body),
       );
     }
     return jsonDecode(res.body) as Map<String, dynamic>;
@@ -80,7 +81,7 @@ class EnrollClient {
       return false;
     }
     throw StateError(
-      'entity lookup failed (${res.statusCode}): ${res.body}',
+      httpFailure('entity lookup', res.statusCode, res.body),
     );
   }
 
@@ -110,7 +111,7 @@ class EnrollClient {
     );
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw StateError(
-        'enroll-create failed (${res.statusCode}): ${_serverMessage(res)}',
+        httpFailure('enroll-create', res.statusCode, res.body),
       );
     }
     return jsonDecode(res.body) as Map<String, dynamic>;
@@ -129,7 +130,7 @@ class EnrollClient {
     final res = await _http.get(uri, headers: _headers(session));
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw StateError(
-        'enroll-list failed (${res.statusCode}): ${_serverMessage(res)}',
+        httpFailure('enroll-list', res.statusCode, res.body),
       );
     }
     final body = jsonDecode(res.body) as Map<String, dynamic>;
@@ -165,7 +166,7 @@ class EnrollClient {
     }
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw StateError(
-        'enroll-approve failed (${res.statusCode}): ${_serverMessage(res)}',
+        httpFailure('enroll-approve', res.statusCode, res.body),
       );
     }
     return jsonDecode(res.body) as Map<String, dynamic>;
@@ -181,7 +182,7 @@ class EnrollClient {
       body: jsonEncode({'enrollId': enrollId}),
     );
     if (res.statusCode < 200 || res.statusCode >= 300) {
-      throw StateError('enroll-reject failed (${res.statusCode}): ${res.body}');
+      throw StateError(httpFailure('enroll-reject', res.statusCode, res.body));
     }
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
@@ -210,7 +211,7 @@ class EnrollClient {
     );
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw StateError(
-        'issue-delegate failed (${res.statusCode}): ${_serverMessage(res)}',
+        httpFailure('issue-delegate', res.statusCode, res.body),
       );
     }
     return jsonDecode(res.body) as Map<String, dynamic>;
@@ -229,7 +230,7 @@ class EnrollClient {
     );
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw StateError(
-        'zone-policy failed (${res.statusCode}): ${_serverMessage(res)}',
+        httpFailure('zone-policy', res.statusCode, res.body),
       );
     }
     return jsonDecode(res.body) as Map<String, dynamic>;
@@ -245,7 +246,7 @@ class EnrollClient {
     );
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw StateError(
-        'delegates failed (${res.statusCode}): ${_serverMessage(res)}',
+        httpFailure('delegates', res.statusCode, res.body),
       );
     }
     final zones = (jsonDecode(res.body) as Map)['zones'] as List? ?? const [];
@@ -266,7 +267,7 @@ class EnrollClient {
     );
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw StateError(
-        'credential-revoke failed (${res.statusCode}): ${_serverMessage(res)}',
+        httpFailure('credential-revoke', res.statusCode, res.body),
       );
     }
     final body = jsonDecode(res.body) as Map<String, dynamic>;
@@ -285,7 +286,7 @@ class EnrollClient {
     );
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw StateError(
-        'credential-list failed (${res.statusCode}): ${_serverMessage(res)}',
+        httpFailure('credential-list', res.statusCode, res.body),
       );
     }
     final body = jsonDecode(res.body) as Map<String, dynamic>;
@@ -305,7 +306,7 @@ class EnrollClient {
     );
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw StateError(
-        'my-zones failed (${res.statusCode}): ${_serverMessage(res)}',
+        httpFailure('my-zones', res.statusCode, res.body),
       );
     }
     return jsonDecode(res.body) as Map<String, dynamic>;
@@ -370,20 +371,9 @@ class EnrollClient {
       res = await send();
     }
     if (res.statusCode < 200 || res.statusCode >= 300) {
-      throw StateError('$path failed (${res.statusCode}): ${_serverMessage(res)}');
+      throw StateError(httpFailure(path, res.statusCode, res.body));
     }
     return jsonDecode(res.body) as Map<String, dynamic>;
-  }
-
-  /// `error` (+ `code`) from a billing error body, else the raw body.
-  static String _serverMessage(http.Response res) {
-    try {
-      final j = jsonDecode(res.body) as Map;
-      final code = j['code'];
-      return '${j['error'] ?? res.body}${code is String ? ' [$code]' : ''}';
-    } catch (_) {
-      return res.body;
-    }
   }
 
   /// Pull approved enrollment by pullToken (no session required).
@@ -398,7 +388,7 @@ class EnrollClient {
       body: jsonEncode({'pullToken': pullToken}),
     );
     if (res.statusCode < 200 || res.statusCode >= 300) {
-      throw StateError('enroll-pull failed (${res.statusCode}): ${res.body}');
+      throw StateError(httpFailure('enroll-pull', res.statusCode, res.body));
     }
     return jsonDecode(res.body) as Map<String, dynamic>;
   }

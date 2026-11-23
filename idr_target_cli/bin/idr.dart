@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:idr_cli_core/idr_cli_core.dart' show runCliWithTelemetry;
 import 'package:idr_target/idr_target.dart' show IdrFlavor;
 import 'package:idr_target_cli/cli.dart';
 
@@ -15,5 +16,10 @@ Future<void> main(List<String> args) async {
     exitCode = 2;
     return;
   }
-  exitCode = await runIdrtCli(rest);
+  exitCode = await runCliWithTelemetry(
+    service: 'idr',
+    version: idrtVersion,
+    args: rest,
+    body: () => runIdrtCli(rest),
+  );
 }

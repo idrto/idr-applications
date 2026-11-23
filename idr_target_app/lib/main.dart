@@ -1,5 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:idr_target/idr_target.dart';
+import 'package:idr_telemetry/idr_telemetry.dart' show runGuarded;
+import 'package:idr_telemetry_flutter/idr_telemetry_flutter.dart';
 
 import 'screens/flow_screens.dart';
 import 'screens/home/home_screen.dart';
@@ -9,9 +11,19 @@ import 'ui/index.dart'; // Theme used
 
 /// `--flavor dev|staging|prod` picks `config/<name>.json`; without it a
 /// release build is prod and `flutter run` is dev ([IdrFlavor.defaultName]).
-void main(List<String> args) {
+/// Matches pubspec `version:`; shown in every log record.
+const _appVersion = '1.0.0+1';
+
+Future<void> main(List<String> args) async {
+  WidgetsFlutterBinding.ensureInitialized();
   IdrFlavor.init(args);
-  runApp(const TargetApp());
+  try {
+    await TelemetryFlutter.init(service: 'idr_target_app', serviceVersion: _appVersion);
+  } on Object {
+    // Logging never stops the app.
+  }
+  // Uncaught errors become crash records (docs/observability/04 §3).
+  runGuarded(() => runApp(const TargetApp()));
 }
 
 class TargetApp extends StatefulWidget {
@@ -45,6 +57,7 @@ class _TargetAppState extends State<TargetApp> {
       title: 'idr',
       debugShowCheckedModeBanner: false,
       theme: idrTheme(),
+      navigatorObservers: [TelemetryFlutter.routeObserver],
       home: ListenableBuilder(
         listenable: _c,
         builder: (_, _) => _Gate(controller: _c),

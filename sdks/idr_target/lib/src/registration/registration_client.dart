@@ -1,3 +1,4 @@
+import 'package:idr_session/idr_session.dart' show httpFailure;
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -75,7 +76,7 @@ class RegistrationClient {
     }
 
     throw StateError(
-      'lookup entity failed (${billRes.statusCode}): ${billRes.body}',
+      httpFailure('lookup entity', billRes.statusCode, billRes.body),
     );
   }
 
@@ -114,7 +115,7 @@ class RegistrationClient {
       return (entityId: email, created: false);
     }
     throw StateError(
-      'ensure entity failed (${create.statusCode}) $url: ${create.body}',
+      httpFailure('ensure entity', create.statusCode, create.body),
     );
   }
 
@@ -208,7 +209,7 @@ class RegistrationClient {
         .replace(queryParameters: {'brand': brand});
     final res = await _http.get(uri, headers: _authHeaders(session));
     if (res.statusCode < 200 || res.statusCode >= 300) {
-      throw StateError('brand check failed (${res.statusCode}): ${res.body}');
+      throw StateError(httpFailure('brand check', res.statusCode, res.body));
     }
     final body = _unwrapData(jsonDecode(res.body));
     return (
@@ -232,7 +233,7 @@ class RegistrationClient {
     );
     final res = await _http.get(uri, headers: _authHeaders(session));
     if (res.statusCode < 200 || res.statusCode >= 300) {
-      throw StateError('host check failed (${res.statusCode}): ${res.body}');
+      throw StateError(httpFailure('host check', res.statusCode, res.body));
     }
     final body = _unwrapData(jsonDecode(res.body));
     return (

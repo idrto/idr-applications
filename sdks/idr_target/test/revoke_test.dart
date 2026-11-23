@@ -51,7 +51,7 @@ void main() {
     expect(
       client.revokeCredential(session: session, ski: 'x'),
       throwsA(predicate(
-          (e) => '$e'.contains('403') && '$e'.contains('Not an owner [FORBIDDEN]'))),
+          (e) => '$e'.contains('credential-revoke failed (HTTP 403) [FORBIDDEN]: Not an owner'))),
     );
   });
 

@@ -1,3 +1,4 @@
+import 'package:idr_session/idr_session.dart' show httpFailure;
 import 'dart:convert';
 import 'dart:io';
 
@@ -93,7 +94,7 @@ class CertificateManager {
     );
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw StateError(
-        'Entity-CA issue failed (${res.statusCode}): ${res.body}',
+        httpFailure('Entity-CA issue', res.statusCode, res.body),
       );
     }
     final body = jsonDecode(res.body) as Map<String, dynamic>;
