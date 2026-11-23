@@ -3,5 +3,6 @@
   "discovery": null,
   "billingPortal": null,
   "dev": false,
-  "nativeSignIn": true
+  "nativeSignIn": true,
+  "agentConsoleLogs": false
 }

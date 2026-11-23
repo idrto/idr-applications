@@ -3,5 +3,6 @@
   "discovery": "https://public.idr.to/.well-known/idr-presence.json",
   "billingPortal": "https://billing.idr.to",
   "dev": false,
-  "nativeSignIn": true
+  "nativeSignIn": true,
+  "agentConsoleLogs": false
 }

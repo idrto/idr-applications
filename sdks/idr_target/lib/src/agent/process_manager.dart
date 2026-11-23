@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:idr_telemetry/idr_telemetry.dart';
 
+import 'package:idr_session/idr_session.dart' show IdrFlavor;
 import 'package:path/path.dart' as p;
 
 import '../internal/logging.dart';
@@ -51,6 +52,10 @@ class ProcessManager {
     if (root != null && (env["IDR_LOG_DIR"] ?? "").isEmpty) env["IDR_LOG_DIR"] = root;
     final tp = currentTraceparent();
     if (tp != null) env['TRACEPARENT'] = tp;
+    // Readable lines on the agent's stdout for the console echo; files are written either way.
+    if (IdrFlavor.current.showAgentLogs && (env['IDR_LOG_FORMAT'] ?? '').isEmpty) {
+      env['IDR_LOG_FORMAT'] = 'pretty';
+    }
     if ((env['RUST_LOG'] ?? '').trim().isEmpty) {
       env['RUST_LOG'] = 'info';
     }
@@ -71,9 +76,14 @@ class ProcessManager {
     );
     _process = proc;
     await pidFile.writeAsString('${proc.pid}\n', flush: true);
-    proc.stdout.transform(utf8.decoder).listen((s) => _log.add(s));
+    final consoleLogs = IdrFlavor.current.showAgentLogs;
+    proc.stdout.transform(utf8.decoder).listen((s) {
+      _log.add(s);
+      if (consoleLogs) _echo(s);
+    });
     proc.stderr.transform(utf8.decoder).listen((s) {
       _log.add(s);
+      if (consoleLogs) _echo(s);
       for (final l in s.split('\n')) {
         if (l.trim().isEmpty) continue;
         _stderrTail.add(l.trimRight());
@@ -90,6 +100,14 @@ class ProcessManager {
       _clearPidFile();
       if (!_exit.isClosed) _exit.add(code);
     }));
+  }
+
+  /// The agent's pretty-printed records (it is started with `IDR_LOG_FORMAT=pretty`), one
+  /// `[agent]` line each, on this process's stderr: the `flutter run` console.
+  void _echo(String chunk) {
+    for (final l in chunk.split('\n')) {
+      if (l.trim().isNotEmpty) stderr.writeln('[agent] ${l.trimRight()}');
+    }
   }
 
   Future<void> stop() async {
