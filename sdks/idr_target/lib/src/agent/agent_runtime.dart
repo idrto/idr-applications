@@ -81,7 +81,7 @@ class AgentRuntime {
     _ensureFreshEntitlement = ensureFreshEntitlement;
 
     if (!File(config.agentBinaryPath).existsSync()) {
-      idrLog('agent: binary missing at ${config.agentBinaryPath}');
+      idrEvent('agent.binary.missing', errorType: 'agent_binary_missing');
       onAttention?.call(IdrTargetAttention(
         code: IdrTargetErrorCode.agentBinaryMissing,
         message: IdrTargetMessages.agentBinaryMissing(config.agentBinaryPath),
@@ -148,17 +148,13 @@ class AgentRuntime {
     );
     final toml = await idrTimed('config_write', () => writer.writeTo(dir));
     _configPath = toml.path;
-    idrLog(
-      'agent: writing ${toml.path} fqhn=$verifiedFqhn '
-      'discovery=${config.discoveryUrl}',
-    );
 
     if (_process == null) {
       _process = ProcessManager();
       _logSub = _process!.logs.listen((line) {
         for (final part in line.split('\n')) {
           final t = part.trimRight();
-          if (t.isNotEmpty) idrLog('agent: $t');
+          if (t.isNotEmpty) idrDebugLine('agent', t);
         }
       });
     }
@@ -168,8 +164,7 @@ class AgentRuntime {
       workingDirectory: dir.path,
       injectEnv: injectEnv,
     ));
-    idrLog('agent: process started binary=${config.agentBinaryPath}');
-
+    
     final backoff = Backoff(
       initial: config.agentRestartInitialDelay,
       max: config.agentRestartMaxDelay,

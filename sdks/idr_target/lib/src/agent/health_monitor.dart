@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import '../internal/backoff.dart';
+import '../internal/logging.dart';
 import 'process_manager.dart';
 
 typedef AgentStartFn = Future<void> Function();
@@ -31,11 +32,13 @@ class HealthMonitor {
       if (_stopping) return;
       if (code == 0) return;
       if (_restarts >= maxRestarts) {
+        idrEvent('agent.restart.budget_exceeded', attrs: {'restarts': _restarts, 'exit_code': code}, errorType: 'restart_budget_exceeded');
         onBudgetExceeded();
         return;
       }
       final delay = backoff.next();
       _restarts++;
+      idrEvent('agent.restart.scheduled', attrs: {'attempt': _restarts, 'delay_ms': delay.inMilliseconds, 'exit_code': code});
       await Future<void>.delayed(delay);
       if (_stopping) return;
       await onRestart();

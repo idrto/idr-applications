@@ -581,11 +581,7 @@ class IdrTarget {
     final startupClock = Stopwatch()..start();
     _setStatus(IdrTargetStatus.initializing);
     _setAttention(null);
-    idrLog(
-      'start: mode=${config.mode} discovery=${config.discoveryUrl} '
-      'insecureDev=${config.insecureDev} agentBinary=${config.agentBinaryPath} '
-      'configDir=${configDir.path}',
-    );
+    idrEvent('target.start.begun', attrs: {'mode': config.mode.toString(), 'insecure_dev': config.insecureDev});
     try {
       await configDir.create(recursive: true);
       _userState = await _store.loadUserState();
@@ -615,10 +611,7 @@ class IdrTarget {
         ));
         return;
       }
-      idrLog(
-        'start: fqhn=${_registrationState!.verifiedFqhn} '
-        'email=${_authSession!.email}',
-      );
+      idrEvent('target.start.registration_ready');
       final pull = _registrationState!.enrollPullToken;
       if (pull != null && pull.isNotEmpty) {
         await _tryPullEnrollment(pull);
@@ -628,12 +621,9 @@ class IdrTarget {
         return;
       }
       await idrTimed('agent_prepare', _continueAfterRegistration);
-      idrLog(
-        'start: done status=$_status agent=$_agentStatus '
-        'attention=${_attention?.code.wire}',
-      );
+      idrEvent('target.start.completed', attrs: {'status': '$_status', 'agent_status': '$_agentStatus', 'attention': _attention?.code.wire});
     } catch (e) {
-      idrLog('start failed: $e');
+      idrEvent('target.start.failed', errorType: 'start_failed', error: e);
       _setStatus(IdrTargetStatus.failed);
       _setAttention(IdrTargetErrors.attentionFor(
         e,
@@ -642,8 +632,7 @@ class IdrTarget {
         context: 'startup',
       ));
     } finally {
-      idrLog('timing phase=startup elapsed_ms=${startupClock.elapsedMilliseconds} '
-          'launch_agent=$launchAgent status=${_status.name}');
+      idrEvent('app.startup.completed', attrs: {'duration_ms': startupClock.elapsedMilliseconds});
     }
   }
 
@@ -767,7 +756,7 @@ class IdrTarget {
         ));
       }
     } catch (e) {
-      idrLog('signIn failed: $e');
+      idrEvent('auth.sign_in.failed', errorType: 'sign_in_failed', error: e);
       _setAttention(IdrTargetErrors.attentionFor(
         e,
         apiBase: config.controlPlaneBase,
@@ -841,7 +830,7 @@ class IdrTarget {
       await _continueAfterRegistration();
       return withEnroll;
     } catch (e) {
-      idrLog('registerHost failed: $e');
+      idrEvent('registration.host.failed', errorType: 'register_host_failed', error: e);
       final attention = IdrTargetErrors.attentionFor(
         e,
         apiBase: config.controlPlaneBase,
@@ -1245,7 +1234,7 @@ class IdrTarget {
         sessionCookie: session.sessionCookie,
       );
     } catch (e) {
-      idrLog('agent token mint failed: $e');
+      idrEvent('entitlement.agent_token.failed', errorType: 'agent_token_failed', error: e);
       _setAttention(IdrTargetErrors.attentionFor(
         e,
         apiBase: config.controlPlaneBase,

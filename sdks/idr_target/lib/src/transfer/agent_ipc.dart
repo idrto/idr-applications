@@ -6,6 +6,7 @@ import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
+import 'package:idr_telemetry/idr_telemetry.dart' show currentContextJson;
 
 /// Why a request to the agent didn't get an answer.
 class AgentIpcException implements Exception {
@@ -38,7 +39,9 @@ class AgentIpc {
 
   /// Send [request] (e.g. `{'cmd': 'list'}`) and return the agent's response.
   Future<Map<String, dynamic>> call(Map<String, Object?> request) {
-    final line = jsonEncode(request);
+    // The caller's trace continues in the agent (optional field; older agents ignore it).
+    final ctx = currentContextJson();
+    final line = jsonEncode({...request, 'ctx': jsonDecode(ctx)});
     final done = Completer<Map<String, dynamic>>();
     _queue = _queue.then((_) async {
       try {

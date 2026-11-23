@@ -32,3 +32,28 @@ Future<T> idrTimed<T>(String phase, Future<T> Function() action) async {
     }
   }
 }
+
+/// A named, registered event (spec/telemetry/events.yaml). [errorType] makes it a WARN with
+/// [error] as its (redacted) message. Never pass secrets, tokens or personal data in [attrs].
+void idrEvent(String event, {Map<String, Object?>? attrs, String? errorType, Object? error}) {
+  if (Telemetry.instance == null) {
+    // ignore: avoid_print
+    print('[idr_target] $event ${attrs ?? ''} ${error ?? ''}');
+    return;
+  }
+  if (errorType == null) {
+    _log.info(event, attrs: attrs);
+  } else {
+    _log.warn(event, errorType: errorType, attrs: attrs, msg: error?.toString(), error: error);
+  }
+}
+
+/// A line of agent output, kept at DEBUG: the agent writes its own structured logs.
+void idrDebugLine(String source, String line) {
+  if (Telemetry.instance == null) {
+    // ignore: avoid_print
+    print('[idr_target] $source: $line');
+    return;
+  }
+  _log.debug('target.sdk.agent_output', lazy: () => {'source': source}, msg: line);
+}

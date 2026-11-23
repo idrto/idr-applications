@@ -18,6 +18,11 @@ class ProcessManager {
   final _exit = StreamController<int>.broadcast();
 
   Stream<String> get logs => _log.stream;
+
+  /// Last stderr lines of the agent (redacted when logged). The agent writes its own
+  /// structured logs; this tail only explains an exit that left no record.
+  final _stderrTail = <String>[];
+  List<String> get stderrTail => List.unmodifiable(_stderrTail);
   Stream<int> get exits => _exit.stream;
   bool get isRunning => _process != null;
 
@@ -67,9 +72,20 @@ class ProcessManager {
     _process = proc;
     await pidFile.writeAsString('${proc.pid}\n', flush: true);
     proc.stdout.transform(utf8.decoder).listen((s) => _log.add(s));
-    proc.stderr.transform(utf8.decoder).listen((s) => _log.add(s));
+    proc.stderr.transform(utf8.decoder).listen((s) {
+      _log.add(s);
+      for (final l in s.split('\n')) {
+        if (l.trim().isEmpty) continue;
+        _stderrTail.add(l.trimRight());
+        if (_stderrTail.length > 20) _stderrTail.removeAt(0);
+      }
+    });
+    idrEvent('agent.process.started', attrs: {'process.pid': proc.pid});
     unawaited(proc.exitCode.then((code) {
       _log.add('[target-agent exited with code $code]');
+      idrEvent('agent.process.exited',
+          attrs: {'exit_code': code, if (code != 0) 'stderr_tail': _stderrTail.join('\n')},
+          errorType: code == 0 ? null : 'agent_exited');
       _process = null;
       _clearPidFile();
       if (!_exit.isClosed) _exit.add(code);
@@ -113,7 +129,7 @@ class ProcessManager {
         await Future<void>.delayed(const Duration(milliseconds: 300));
         Process.killPid(pid, ProcessSignal.sigkill);
       }
-      idrLog('reaped prior target-agent pid=$pid');
+      idrEvent('agent.process.reaped', attrs: {'process.pid': pid});
     } catch (_) {
       // Process already gone.
     }
