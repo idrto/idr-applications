@@ -42,6 +42,7 @@ dependencies:
     path: ../../../agents_engine/agent/packages/idr_telemetry
   idr_telemetry_flutter:
     path: ../../../agents_engine/agent/packages/idr_telemetry_flutter
+  url_launcher: ^6.3.0
   # Native folder/file pickers (Windows IFileOpenDialog); already resolved transitively.
   win32: ^6.4.0
 

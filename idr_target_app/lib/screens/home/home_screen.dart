@@ -10,6 +10,7 @@ import '../../ui/index.dart';
 import '../../widgets/common.dart';
 import '../flow_screens.dart';
 import 'approvals_section.dart';
+import 'report_issue_card.dart';
 import 'domains_section.dart';
 import 'org_section.dart';
 import 'services_section.dart';
@@ -672,6 +673,8 @@ class _DiagnosticsSectionState extends State<DiagnosticsSection> {
             onPressed: _running ? null : _run,
           ),
         ),
+        const ReportIssueCard(),
+        const SizedBox(height: 12),
         if (_checks == null)
           const IdrCard(
             child: IdrEmpty(
