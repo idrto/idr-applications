@@ -1,4 +1,4 @@
-import 'package:idr_session/idr_session.dart' show httpFailure;
+import 'package:idr_session/idr_session.dart' show httpFailure, TracedHttpClient;
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -30,7 +30,7 @@ class AgentTokenClient {
     required this.store,
     required this.crypto,
     http.Client? httpClient,
-  })  : _http = httpClient ?? http.Client(),
+  })  : _http = httpClient ?? TracedHttpClient(),
         _pop = PopBuilder(crypto);
 
   final String apiBaseUrl;

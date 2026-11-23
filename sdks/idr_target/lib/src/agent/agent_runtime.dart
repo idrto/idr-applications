@@ -58,6 +58,7 @@ class AgentRuntime {
   Future<EntitlementToken?> Function()? _ensureFreshEntitlement;
 
   void _setStatus(AgentRuntimeStatus s) {
+    if (status != s) idrEvent('agent.status.changed', attrs: {'from': status.name, 'to': s.name});
     status = s;
     onStatus?.call(s);
   }

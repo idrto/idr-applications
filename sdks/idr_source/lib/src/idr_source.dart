@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:idr_service_http/idr_service_http.dart' show ChatTurn;
 import 'package:idr_session/idr_session.dart';
+import 'package:idr_telemetry/idr_telemetry.dart' show IdrLog, newId, withIds;
 import 'package:two_key_dart_sdk/two_key_headless.dart';
 
 import 'auth/auth_manager.dart';
@@ -16,6 +17,8 @@ import 'prefs/source_prefs.dart';
 import 'services/chat_gateway.dart';
 import 'state/ready_step.dart';
 import 'state/source_state.dart';
+
+const _log = IdrLog('idr_source');
 
 /// Production Source facade — billing SSO, Presence/WebRTC, Target services.
 class IdrSource {
@@ -275,6 +278,15 @@ class IdrSource {
       );
     }
 
+    // The Source owns the logical session_id; the engine and the wire carry it onward (02 §3.2).
+    await withIds(
+      () => _log.span('source.connect', (_) => _connectCore(session, target),
+          attrs: {'target.fqhn': target}, persistStart: true),
+      sessionId: newId(),
+    );
+  }
+
+  Future<void> _connectCore(IdrAuthSession session, String target) async {
     final token = await _accessToken(session);
     try {
       // Approved machine_source identity → mTLS; otherwise bearer-only

@@ -2,6 +2,9 @@ import 'package:idr_telemetry/idr_telemetry.dart';
 
 const _log = IdrLog('idr_target.sdk');
 
+/// Steps slower than this also log `target.phase.slow` at WARN.
+const slowPhaseMs = 3000;
+
 /// Diagnostic note routed through idr_telemetry (redacted before it is stored).
 /// Without an initialised Telemetry (tests, bare SDK use) it falls back to stdout.
 /// Never pass secrets/JWTs/private keys.
@@ -27,8 +30,13 @@ Future<T> idrTimed<T>(String phase, Future<T> Function() action) async {
       // ignore: avoid_print
       print('[idr_target] timing phase=$phase elapsed_ms=${clock.elapsedMilliseconds} outcome=$outcome');
     } else {
-      _log.info('target.phase.completed',
-          attrs: {'phase': phase, 'duration_ms': clock.elapsedMilliseconds, 'outcome': outcome});
+      final ms = clock.elapsedMilliseconds;
+      final attrs = {'phase': phase, 'duration_ms': ms, 'outcome': outcome};
+      _log.info('target.phase.completed', attrs: attrs);
+      // A step that takes this long is what a user experiences as "stuck": make it findable.
+      if (ms >= slowPhaseMs) {
+        _log.warn('target.phase.slow', errorType: 'slow_phase', attrs: {...attrs, 'threshold_ms': slowPhaseMs});
+      }
     }
   }
 }

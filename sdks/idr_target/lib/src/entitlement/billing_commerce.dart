@@ -1,3 +1,4 @@
+import 'package:idr_session/idr_session.dart' show TracedHttpClient;
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -17,7 +18,7 @@ class BillingCommerceClient {
   BillingCommerceClient({
     required this.apiBaseUrl,
     http.Client? httpClient,
-  }) : _http = httpClient ?? http.Client();
+  }) : _http = httpClient ?? TracedHttpClient();
 
   final String apiBaseUrl;
   final http.Client _http;

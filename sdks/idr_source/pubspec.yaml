@@ -13,6 +13,8 @@ dependencies:
     path: ../../../../agents_engine/agent/packages/idr_dp_ffi
   idr_client:
     path: ../../../../agents_engine/agent/packages/idr_client
+  idr_telemetry:
+    path: ../../../../agents_engine/agent/packages/idr_telemetry
   idr_service_http:
     path: packages/idr_service_http
   idr_ollama:

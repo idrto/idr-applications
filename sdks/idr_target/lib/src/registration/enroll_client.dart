@@ -1,6 +1,6 @@
 ﻿import 'dart:convert';
 
-import 'package:idr_session/idr_session.dart' show httpFailure;
+import 'package:idr_session/idr_session.dart' show httpFailure, TracedHttpClient;
 import 'package:http/http.dart' as http;
 
 import '../auth/auth.dart';
@@ -11,7 +11,7 @@ class EnrollClient {
   EnrollClient({
     required this.controlPlaneUrl,
     http.Client? httpClient,
-  }) : _http = httpClient ?? http.Client();
+  }) : _http = httpClient ?? TracedHttpClient();
 
   final String controlPlaneUrl;
   final http.Client _http;

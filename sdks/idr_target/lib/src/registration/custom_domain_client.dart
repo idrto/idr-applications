@@ -1,3 +1,4 @@
+import 'package:idr_session/idr_session.dart' show TracedHttpClient;
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -107,7 +108,7 @@ class CustomDomainClient {
   CustomDomainClient({
     required this.controlPlaneUrl,
     http.Client? httpClient,
-  }) : _http = httpClient ?? http.Client();
+  }) : _http = httpClient ?? TracedHttpClient();
 
   final String controlPlaneUrl;
   final http.Client _http;

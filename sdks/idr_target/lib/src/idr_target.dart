@@ -1,3 +1,4 @@
+import 'package:idr_session/idr_session.dart' show TracedHttpClient;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -63,7 +64,7 @@ class IdrTarget {
         _crypto = crypto,
         _openUrl = openUrl ?? LoopbackAuthSessionLauncher.openSystemBrowser {
     // All control-plane API clients share connections and one owned lifetime.
-    _apiHttp = httpClient ?? http.Client();
+    _apiHttp = httpClient ?? TracedHttpClient();
     _ownsApiHttp = httpClient == null;
     final launcher = LoopbackAuthSessionLauncher(openBrowser: _openUrl);
     _authClient = authClient ??
@@ -471,13 +472,27 @@ class IdrTarget {
     return defaultTargetDirectory;
   }
 
+  final _stateClock = Stopwatch()..start();
+
   void _setStatus(IdrTargetStatus s) {
+    final from = _status;
+    if (from != s) {
+      idrEvent('target.state.changed', attrs: {'from': from.name, 'to': s.name, 'since_ms': _stateClock.elapsedMilliseconds});
+      _stateClock
+        ..reset()
+        ..start();
+    }
     _status = s;
     if (!_statusCtrl.isClosed) _statusCtrl.add(s);
     _publishState();
   }
 
   void _setAttention(IdrTargetAttention? a) {
+    if (a != null) {
+      idrEvent('target.attention.raised', attrs: {'code': a.code.wire, 'status': _status.name, 'agent_status': _agentStatus.name}, errorType: a.code.wire);
+    } else if (_attention != null) {
+      idrEvent('target.attention.cleared', attrs: {'code': _attention!.code.wire});
+    }
     _attention = a;
     if (!_attentionCtrl.isClosed) _attentionCtrl.add(a);
     if (a != null) {
@@ -488,6 +503,7 @@ class IdrTarget {
   }
 
   void _setTls(IdrTlsStatus s) {
+    if (_tlsStatus != s) idrEvent('target.tls.changed', attrs: {'from': _tlsStatus.name, 'to': s.name});
     _tlsStatus = s;
     if (!_tlsCtrl.isClosed) _tlsCtrl.add(s);
     _publishState();
@@ -1186,9 +1202,9 @@ class IdrTarget {
 
     _setStatus(IdrTargetStatus.enrolling);
     final crypto = _requireCrypto();
-    final machine = await _identity.ensureMachineKey(crypto);
-    final targetId = await _identity.ensureTargetIdentity(crypto);
-    final identity = await _identity.loadMachineIdentity();
+    final machine = await idrTimed('machine_key', () => _identity.ensureMachineKey(crypto));
+    final targetId = await idrTimed('target_identity', () => _identity.ensureTargetIdentity(crypto));
+    final identity = await idrTimed('machine_identity_load', _identity.loadMachineIdentity);
     var credential = Map<String, dynamic>.from(
       (identity?['credential'] as Map?)?.cast<String, dynamic>() ?? {},
     );
@@ -1203,7 +1219,7 @@ class IdrTarget {
     credential['host'] = reg.verifiedFqhn;
     credential['publicJwk'] ??= machine.publicJwk;
     credential['entityId'] ??= reg.entityId;
-    final signed = await _enrollment.ensureSignedMachineCredential(credential);
+    final signed = await idrTimed('credential_sign', () => _enrollment.ensureSignedMachineCredential(credential));
     if (!identical(signed, credential)) {
       credential = signed;
       await _identity.saveMachineIdentity(
@@ -1227,12 +1243,12 @@ class IdrTarget {
 
     _setStatus(IdrTargetStatus.authenticating);
     try {
-      await _entitlement.mint(
-        credential: credential,
-        privatePem: machine.privatePem,
-        targetIdentityB64url: targetId.publicB64url,
-        sessionCookie: session.sessionCookie,
-      );
+      await idrTimed('entitlement_mint', () => _entitlement.mint(
+            credential: credential,
+            privatePem: machine.privatePem,
+            targetIdentityB64url: targetId.publicB64url,
+            sessionCookie: session.sessionCookie,
+          ));
     } catch (e) {
       idrEvent('entitlement.agent_token.failed', errorType: 'agent_token_failed', error: e);
       _setAttention(IdrTargetErrors.attentionFor(
@@ -1268,9 +1284,9 @@ class IdrTarget {
       onRefreshed: _agent.applyFreshEntitlement,
     );
 
-    await ensureTls();
-    idrLog('continue: starting target-agent for ${reg.verifiedFqhn}');
-    await _startAgent();
+    await idrTimed('tls', ensureTls);
+    idrEvent('target.agent.launching');
+    await idrTimed('agent_start', _startAgent);
   }
 
   /// Phase 1: skip leaf for native `*.idr.to`. Phase 2: Entity-CA when enabled.

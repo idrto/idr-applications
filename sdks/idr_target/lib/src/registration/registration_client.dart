@@ -1,4 +1,4 @@
-import 'package:idr_session/idr_session.dart' show httpFailure;
+import 'package:idr_session/idr_session.dart' show httpFailure, TracedHttpClient;
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -14,7 +14,7 @@ class RegistrationClient {
     required this.controlPlaneUrl,
     required this.store,
     http.Client? httpClient,
-  }) : _http = httpClient ?? http.Client();
+  }) : _http = httpClient ?? TracedHttpClient();
 
   final String controlPlaneUrl;
   final SessionStore store;

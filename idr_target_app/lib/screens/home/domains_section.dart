@@ -29,6 +29,7 @@ class DomainsSection extends StatefulWidget {
 class _DomainsSectionState extends State<DomainsSection> {
   final _domain = TextEditingController();
   List<CustomDomain>? _domains;
+  bool _loading = true;
   String? _notice;
   Timer? _timer;
 
@@ -52,8 +53,15 @@ class _DomainsSectionState extends State<DomainsSection> {
   }
 
   Future<void> _load() async {
+    if (mounted) setState(() => _loading = true);
+    // null means the request failed (the controller shows the error): stop the spinner
+    // and keep the last list, if any, instead of waiting forever.
     final d = await c.domains();
-    if (mounted) setState(() => _domains = d);
+    if (!mounted) return;
+    setState(() {
+      _loading = false;
+      if (d != null) _domains = d;
+    });
   }
 
   Future<void> _add() async {
@@ -180,11 +188,19 @@ class _DomainsSectionState extends State<DomainsSection> {
           IdrAlert(tone: IdrTone.success, title: _notice!),
         ],
         const SizedBox(height: 16),
-        if (domains == null)
+        if (domains == null && _loading)
           const Center(
             child: Padding(
               padding: EdgeInsets.all(24),
               child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          )
+        else if (domains == null)
+          const IdrCard(
+            child: IdrEmpty(
+              icon: Icons.cloud_off_outlined,
+              title: 'Could not load custom domains',
+              description: 'The IDR service could not be reached. Check your connection, then press Refresh.',
             ),
           )
         else if (domains.isEmpty)
