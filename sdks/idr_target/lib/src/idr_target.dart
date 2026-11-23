@@ -231,6 +231,8 @@ class IdrTarget {
   Future<IdrAuthSession?> _freshSession() async {
     final s = _authSession;
     if (s == null || !s.accessTokenLikelyExpired) return s;
+    // A refresh just failed (Billing unreachable): reuse the session instead of waiting again.
+    if (_auth.refreshRecentlyFailed) return s;
     return _remint ??= _auth.restore().then((fresh) {
       if (fresh != null && _authSession != null) _authSession = fresh;
       return _authSession;
@@ -614,7 +616,23 @@ class IdrTarget {
         ));
         return;
       }
-      await idrTimed('subscription', hydrateSubscription);
+      // Billing could not be reached for the token refresh: the subscription call would fail
+      // the same way after another wait, so report it now and skip that step.
+      final refreshError = _auth.lastRefreshError;
+      final offline = refreshError != null &&
+          IdrTargetErrors.attentionFor(refreshError, apiBase: config.controlPlaneBase).code ==
+              IdrTargetErrorCode.networkUnavailable;
+      if (offline) {
+        idrEvent('target.start.billing_unreachable');
+        _setAttention(IdrTargetErrors.attentionFor(
+          refreshError,
+          apiBase: config.controlPlaneBase,
+          fallbackCode: IdrTargetErrorCode.billingUnavailable,
+          context: 'billing',
+        ));
+      } else {
+        await idrTimed('subscription', hydrateSubscription);
+      }
       if (_authSession == null) return;
       _registrationState = await idrTimed('registration_load', _registration.load);
       if (_registrationState == null) {

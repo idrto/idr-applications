@@ -2,6 +2,7 @@ import 'package:idr_session/idr_session.dart';
 import 'package:two_key_dart_sdk/two_key_headless.dart';
 
 import '../errors.dart';
+import '../internal/logging.dart';
 import 'login_options.dart';
 import 'session_store.dart';
 
@@ -21,6 +22,16 @@ class AuthManager {
 
   IdrLoginOptions? loginOptions;
 
+  /// The last token refresh failure and when it happened. Billing is not asked again
+  /// within [refreshBackoff] of a failure: on Windows each refused connection costs ~2 s,
+  /// and start-up used to pay it twice (restore, then the subscription step).
+  Object? lastRefreshError;
+  DateTime? _lastRefreshFailedAt;
+  static const refreshBackoff = Duration(seconds: 30);
+
+  bool get refreshRecentlyFailed =>
+      _lastRefreshFailedAt != null && DateTime.now().difference(_lastRefreshFailedAt!) < refreshBackoff;
+
   /// Reuse an unexpired API token; refresh expired/legacy sessions from Auth.
   /// Billing still validates the token and subscription on startup.
   Future<IdrAuthSession?> restore() async {
@@ -29,10 +40,19 @@ class AuthManager {
     if (saved.accessExpiresAt != null && !saved.accessTokenLikelyExpired) {
       return saved;
     }
+    if (refreshRecentlyFailed) return saved;
+    final clock = Stopwatch()..start();
     try {
-      return await _mint() ?? saved;
-    } catch (_) {
+      final fresh = await _mint() ?? saved;
+      lastRefreshError = null;
+      _lastRefreshFailedAt = null;
+      idrEvent('auth.token.refreshed', attrs: {'duration_ms': clock.elapsedMilliseconds});
+      return fresh;
+    } catch (e) {
       // Never clear here — wiping on refresh failure forced SignIn every launch.
+      lastRefreshError = e;
+      _lastRefreshFailedAt = DateTime.now();
+      idrEvent('auth.token.refresh_failed', attrs: {'duration_ms': clock.elapsedMilliseconds}, errorType: 'token_refresh_failed', error: e);
       return saved;
     }
   }

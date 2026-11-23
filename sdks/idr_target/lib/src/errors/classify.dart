@@ -22,6 +22,18 @@ abstract final class IdrTargetErrors {
       return IdrTargetAttention(code: error.code, message: error.message);
     }
 
+    // The Billing SDK wraps a failed connection in its own exception with no HTTP status.
+    if (error is BillingAuthException &&
+        (error.statusCode ?? 0) == 0 &&
+        _looksLikeNetwork(error.message)) {
+      return IdrTargetAttention(
+        code: IdrTargetErrorCode.networkUnavailable,
+        message: _looksLikeRefused(error.message)
+            ? IdrTargetErrorMessages.authUnreachable(apiBase)
+            : IdrTargetErrorMessages.networkUnavailable(apiBase),
+      );
+    }
+
     if (error is BillingAuthException) {
       final code =
           IdrTargetErrorCode.tryParse(error.code ?? '') ?? fallbackCode;

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:idr_target/idr_target.dart';
 import 'package:test/test.dart';
+import 'package:two_key_dart_sdk/two_key_headless.dart' show BillingAuthException;
 
 void main() {
   const api = 'http://127.0.0.1:3000';
@@ -35,6 +36,19 @@ void main() {
       final a = IdrTargetErrors.attentionFor(err, apiBase: api);
       expect(a.code, IdrTargetErrorCode.networkUnavailable);
       expect(a.message, IdrTargetMessages.authUnreachable(api));
+    });
+
+    test('maps a Billing SDK connection failure to networkUnavailable', () {
+      final a = IdrTargetErrors.attentionFor(
+        const BillingAuthException('ClientException with SocketException: The remote computer refused the network connection (errno = 1225)'),
+        apiBase: 'http://127.0.0.1:3000',
+      );
+      expect(a.code, IdrTargetErrorCode.networkUnavailable);
+      final http401 = IdrTargetErrors.attentionFor(
+        const BillingAuthException('Unauthorized', statusCode: 401),
+        apiBase: 'http://127.0.0.1:3000',
+      );
+      expect(http401.code, isNot(IdrTargetErrorCode.networkUnavailable), reason: 'a server answer is not a network failure');
     });
 
     test('preserves IdrTargetException', () {

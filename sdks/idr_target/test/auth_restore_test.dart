@@ -14,9 +14,13 @@ class _AuthClient extends BillingAuthClient {
             storagePrefix: 'test',
             storage: storage);
   int refreshes = 0;
+  bool unreachable = false;
   @override
   Future<BillingAuthSession?> getSession() async {
     refreshes++;
+    if (unreachable) {
+      throw const BillingAuthException('ClientException with SocketException: The remote computer refused the network connection');
+    }
     return null;
   }
 }
@@ -48,4 +52,22 @@ void main() {
       expect(client.refreshes, entry.key == 'valid' ? 0 : 1);
     });
   }
+
+  test('a failed refresh is not retried within the backoff (each retry cost ~2 s offline)', () async {
+    final storage = MemoryStorage();
+    final store = SessionStore(storage: storage);
+    final client = _AuthClient(storage)..unreachable = true;
+    addTearDown(client.dispose);
+    await store.saveSession(IdrAuthSession(
+      token: 'saved-token',
+      email: 'test@example.com',
+      accessExpiresAt: DateTime.now().subtract(const Duration(minutes: 1)),
+    ));
+    final manager = AuthManager(client: client, store: store, launcher: LoopbackAuthSessionLauncher());
+    expect((await manager.restore())?.token, 'saved-token');
+    expect(manager.lastRefreshError, isA<BillingAuthException>());
+    expect(manager.refreshRecentlyFailed, isTrue);
+    expect((await manager.restore())?.token, 'saved-token');
+    expect(client.refreshes, 1, reason: 'the second restore must not call Billing again');
+  });
 }
