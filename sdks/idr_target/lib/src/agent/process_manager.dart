@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:idr_telemetry/idr_telemetry.dart';
 
 import 'package:path/path.dart' as p;
 
@@ -40,6 +41,11 @@ class ProcessManager {
       ...Platform.environment,
       'IDR_CONFIG': configPath,
     };
+    // Agent logs into the same log root and continues this process's trace (docs/observability).
+    final root = defaultLogRoot();
+    if (root != null && (env["IDR_LOG_DIR"] ?? "").isEmpty) env["IDR_LOG_DIR"] = root;
+    final tp = currentTraceparent();
+    if (tp != null) env['TRACEPARENT'] = tp;
     if ((env['RUST_LOG'] ?? '').trim().isEmpty) {
       env['RUST_LOG'] = 'info';
     }

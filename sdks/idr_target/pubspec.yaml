@@ -11,6 +11,8 @@ environment:
 dependencies:
   idr_session:
     path: ../idr_session
+  idr_telemetry:
+    path: ../../../../agents_engine/agent/packages/idr_telemetry
   flutter:
     sdk: flutter
   http: ^1.2.2
