@@ -38,6 +38,7 @@ Future<int> runIdrtCli(List<String> args) => (CliRunner(
           ..addCommand(SubscribeCommand())
           ..addCommand(TransferCommand())
           ..addCommand(DoctorCommand())
+          ..addCommand(DiagCommand(program: 'idr', version: idrtVersion))
           // Modes
           ..addCommand(PersonalCommand())
           ..addCommand(EnterpriseCommand())

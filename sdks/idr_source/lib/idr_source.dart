@@ -17,6 +17,7 @@ export 'src/catalog/service_selection.dart';
 export 'src/config.dart';
 export 'src/connection/connection_manager.dart' show canonicalPresenceFqhn;
 export 'src/errors.dart';
+export 'src/identity/presence_source_id.dart' show presenceSourceId;
 export 'src/identity/source_identity_manager.dart' show SourceIdentityManager;
 export 'src/idr_source.dart';
 export 'src/library_path.dart';

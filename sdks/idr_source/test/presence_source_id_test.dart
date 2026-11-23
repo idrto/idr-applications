@@ -6,6 +6,10 @@ void main() {
     expect(presenceSourceId('{"ski":"abc123ski","credential":{"x":1}}'), 'abc123ski');
   });
 
+  test('reads the ski nested in the stored CLI identity', () {
+    expect(presenceSourceId('{"credential":{"ski":"nested-ski"}}'), 'nested-ski');
+  });
+
   test('falls back to a constant without a device identity or a usable ski', () {
     expect(presenceSourceId(null), 'dart');
     expect(presenceSourceId('not json'), 'dart');

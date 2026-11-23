@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:idr_cli_core/idr_cli_core.dart';
 import 'package:idr_source/idr_source.dart'
-    show FileAuthStorage, IdrFlavor, canonicalPresenceFqhn, idrSourceDirectory;
+    show FileAuthStorage, IdrFlavor, canonicalPresenceFqhn, idrSourceDirectory, presenceSourceId;
 
 import '../prefs/cli_prefs.dart';
 
@@ -88,7 +88,7 @@ Future<String> ensureSourceAgent(String exe, {String? target}) async {
     targets: targets,
     dataDir: _agentDir.path,
     receiveDir: _join([home, 'Downloads', 'IDR']),
-    sourceId: Platform.localHostname,
+    sourceId: presenceSourceId(await _storedIdentityOrNull()), // device ski, never the hostname (D9)
   );
   final changed = toml != old;
   if (changed) {
@@ -129,6 +129,9 @@ Future<void> _stop(String exe, String cfg) async {
       hint: 'Stop it (close its window, or end source-agent in Task Manager), then try again.',
       code: 'AGENT_BUSY');
 }
+
+/// The stored identity JSON, or null when this machine has not enrolled.
+Future<String?> _storedIdentityOrNull() => FileAuthStorage().getItem('idr.source.identity');
 
 /// This device's approved identity, as `idrs enroll` stored it.
 Future<String> _identityJson() async {

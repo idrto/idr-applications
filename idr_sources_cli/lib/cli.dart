@@ -35,5 +35,6 @@ Future<int> runIdrCli(List<String> args) => (CliRunner(
           ..addCommand(ActiveCommand())
           ..addCommand(TransferCommand())
           ..addCommand(DoctorCommand())
+          ..addCommand(DiagCommand(program: 'idrs', version: idrVersion))
           ..addCommand(VersionCommand()))
         .execute(args, translate: translateSourceError);

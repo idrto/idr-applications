@@ -3,6 +3,7 @@
 /// rendering, exit codes, secret masking and diagnostic checks.
 library;
 
+export 'src/diag_command.dart' show DiagCommand, parseWindow;
 export 'src/telemetry_run.dart' show runCliWithTelemetry;
 
 import 'dart:async';
@@ -14,10 +15,13 @@ import 'package:args/args.dart';
 import 'package:args/command_runner.dart';
 import 'package:cli_completion/cli_completion.dart';
 import 'package:idr_dp_ffi/idr_dp_ffi.dart';
+import 'package:idr_telemetry/idr_telemetry.dart' show IdrLog;
 import 'package:mason_logger/mason_logger.dart';
 // ponytail: not exported; drop if mason_logger restores the cursor itself.
 // ignore: implementation_imports
 import 'package:mason_logger/src/terminal_overrides.dart';
+
+const _log = IdrLog('idr_cli_core.ui');
 
 /// Exit codes shared by both CLIs.
 abstract final class CliExit {
@@ -142,8 +146,10 @@ class Ui {
   void success(String message) =>
       _out.writeln('${lightGreen.wrap('✓')} $message');
 
-  void warn(String message) =>
-      stderr.writeln('${yellow.wrap('warning:')} $message');
+  void warn(String message) {
+    _log.warn('ui.command.warning', errorType: 'cli_warning', msg: message);
+    stderr.writeln('${yellow.wrap('warning:')} $message');
+  }
 
   /// A follow-up command or fix, e.g. `Next: idrs connect`.
   void hint(String message) => _out.writeln(darkGray.wrap(message));
@@ -313,6 +319,9 @@ class Ui {
 
   void _error(CliError e, [StackTrace? stack]) {
     final message = redact(e.message);
+    // The user sees this on stderr; the log gets the same failure with its stable code.
+    _log.warn('ui.command.error',
+        errorType: e.code ?? 'cli_error', attrs: {'exit_code': e.exitCode}, msg: message);
     final hint = e.hint == null ? null : redact(e.hint!);
     if (json) {
       emit({
@@ -523,7 +532,7 @@ class CliRunner extends CompletionCommandRunner<int> {
       final code =
           await overrideAnsiOutput(
             ui.color,
-            () => runZoned(() => runCommand(top), zoneSpecification: _sdkLogs),
+            () => runCommand(top),
           ) ??
           CliExit.ok;
       if (ui.json && !ui._emitted && !help) {
@@ -585,7 +594,7 @@ class CliRunner extends CompletionCommandRunner<int> {
       ui = outer;
       final Menu menu;
       try {
-        menu = await runZoned(load, zoneSpecification: _sdkLogs);
+        menu = await load();
       } catch (e, stack) {
         if (trail.isEmpty) rethrow;
         _fail(e, stack);
@@ -619,12 +628,6 @@ class CliRunner extends CompletionCommandRunner<int> {
       }
     }
   }
-
-  /// SDK loggers print `[idr_…]` lines: debug output, not results.
-  static final _sdkLogs = ZoneSpecification(
-    print: (self, parent, zone, line) =>
-        line.startsWith('[idr_') ? ui.debug(line) : parent.print(zone, line),
-  );
 
   static String _path(ArgResults top) => [
     for (ArgResults? c = top.command; c != null; c = c.command) c.name,
