@@ -913,9 +913,14 @@ class IdrTarget {
   ) async {
     final session = await _freshSession();
     if (session == null) throw StateError('sign in first');
-    // Zone admins sign with a zone key; only the root machine has a root CA.
-    if ((await _identity.loadZoneCas()).isEmpty ||
-        await _identity.loadAdminCa() != null) {
+    // Zone admins sign with a zone key; only the root machine has a root CA. A machine that already
+    // holds a complete root CA has nothing to set up, so a poll skips the entity-ensure request.
+    final ca = await _identity.loadAdminCa();
+    final hasCa = ca != null &&
+        (ca['issuerSki'] as String?)?.isNotEmpty == true &&
+        ca['privateJwk'] is Map &&
+        (ca['caCertPem'] as String?)?.contains('BEGIN CERTIFICATE') == true;
+    if (!hasCa && ((await _identity.loadZoneCas()).isEmpty || ca != null)) {
       await ensureAdminCa(entityId: entityId);
     }
     final list = await _enrollment.listPending(

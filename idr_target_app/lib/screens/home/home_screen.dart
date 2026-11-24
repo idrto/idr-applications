@@ -46,7 +46,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _tick();
-    _timer = Timer.periodic(const Duration(seconds: 15), (_) => _tick());
+    _timer = Timer.periodic(const Duration(minutes: 5), (_) => _tick());
   }
 
   @override
