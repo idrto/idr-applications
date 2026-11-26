@@ -4,5 +4,5 @@
   "billingPortal": "https://billing.idr.to",
   "dev": false,
   "nativeSignIn": true,
-  "agentConsoleLogs": false
+  "agentConsoleLogs": true
 }
