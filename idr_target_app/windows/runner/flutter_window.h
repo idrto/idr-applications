@@ -3,6 +3,7 @@
 
 #include <flutter/dart_project.h>
 #include <flutter/flutter_view_controller.h>
+#include <flutter/method_channel.h>
 
 #include <memory>
 
@@ -28,6 +29,13 @@ class FlutterWindow : public Win32Window {
 
   // The Flutter instance hosted by this window.
   std::unique_ptr<flutter::FlutterViewController> flutter_controller_;
+
+  // "idr/window": Dart asks to hide to the tray; the tray asks Dart to quit.
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> channel_;
+
+  void HideToTray();
+  void RestoreFromTray();
+  void ShowTrayMenu();
 };
 
 #endif  // RUNNER_FLUTTER_WINDOW_H_

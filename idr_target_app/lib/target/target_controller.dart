@@ -54,6 +54,7 @@ class TargetController extends ChangeNotifier {
   StreamSubscription<TargetState>? _sub;
   StreamSubscription<FileSystemEvent>? _storeWatch;
   Timer? _storeChanged;
+  Timer? _agentPoll;
 
   static const _orgKey = 'idrt.org';
   static const _providerKey = 'idrt.provider';
@@ -69,6 +70,9 @@ class TargetController extends ChangeNotifier {
   String? machineTenant;
   bool _adminCaReady = false;
 
+  /// A target-agent this app did not start (`idr start`) is serving.
+  bool agentElsewhere = false;
+
   bool get busy => busyLabel != null;
   TargetState get state => target.state;
   IdrAuthSession? get session => target.session;
@@ -80,7 +84,11 @@ class TargetController extends ChangeNotifier {
   bool get awaitingApproval => state.enrollment.awaitingAdmin;
   bool get agentRunning =>
       state.agent == AgentRuntimeStatus.running ||
-      state.agent == AgentRuntimeStatus.reconnecting;
+      state.agent == AgentRuntimeStatus.reconnecting ||
+      agentElsewhere;
+
+  /// This app started the agent, so quitting it stops serving.
+  bool get ownsAgent => state.agent != AgentRuntimeStatus.stopped;
 
   /// Setup is complete when the paid plan is active and, for admin machines,
   /// the local CA exists (the CLI creates it right after billing passes).
@@ -93,7 +101,13 @@ class TargetController extends ChangeNotifier {
     if (booted) return;
     _sub = target.stateStream.listen((_) => notifyListeners());
     try {
-      if (_sharedStore) _watchSharedStore();
+      if (_sharedStore) {
+        _watchSharedStore();
+        _agentPoll = Timer.periodic(
+          const Duration(seconds: 5),
+          (_) => _checkAgentElsewhere(),
+        );
+      }
       await target.start(launchAgent: false);
       await _loadLocal();
       if (session == null) await loadLoginOptions();
@@ -101,6 +115,15 @@ class TargetController extends ChangeNotifier {
       error = describeError(e);
     }
     booted = true;
+    notifyListeners();
+    if (_sharedStore) await _checkAgentElsewhere();
+  }
+
+  /// `idr start` runs its own agent; show it as serving here.
+  Future<void> _checkAgentElsewhere() async {
+    final now = registration != null && await target.agentRunningElsewhere();
+    if (now == agentElsewhere) return;
+    agentElsewhere = now;
     notifyListeners();
   }
 
@@ -183,6 +206,7 @@ class TargetController extends ChangeNotifier {
     unawaited(_sub?.cancel());
     unawaited(_storeWatch?.cancel());
     _storeChanged?.cancel();
+    _agentPoll?.cancel();
     unawaited(target.dispose());
     super.dispose();
   }

@@ -1,3 +1,7 @@
+import 'dart:io';
+import 'dart:ui' show AppExitResponse, AppExitType;
+
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:idr_target/idr_target.dart';
 import 'package:idr_telemetry/idr_telemetry.dart' show runGuarded;
@@ -36,19 +40,82 @@ class TargetApp extends StatefulWidget {
   State<TargetApp> createState() => _TargetAppState();
 }
 
+/// What closing the window does while this app's agent serves.
+enum _OnClose { tray, stop }
+
 class _TargetAppState extends State<TargetApp> {
   late final TargetController _c = widget.controller ?? TargetController();
+  final _nav = GlobalKey<NavigatorState>();
+
+  /// Windows runner (flutter_window.cpp): `hideToTray`; the tray menu calls `quit`.
+  static const _window = MethodChannel('idr/window');
+  late final AppLifecycleListener _life;
 
   @override
   void initState() {
     super.initState();
     _c.boot();
+    _life = AppLifecycleListener(onExitRequested: _onExitRequested);
+    _window.setMethodCallHandler((call) async {
+      if (call.method == 'quit') await _stopAndExit();
+    });
   }
 
   @override
   void dispose() {
+    _life.dispose();
     _c.dispose();
     super.dispose();
+  }
+
+  /// Closing the window would orphan the agent: ask whether to keep serving
+  /// from the tray or stop it.
+  Future<AppExitResponse> _onExitRequested() async {
+    if (!_c.ownsAgent) return AppExitResponse.exit;
+    final ctx = _nav.currentContext;
+    final choice = ctx == null
+        ? _OnClose.stop
+        : await showDialog<_OnClose>(
+            context: ctx,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Close idr Target?'),
+              content: const Text(
+                'The Target agent is serving this machine. Keep it running in '
+                'the system tray, or stop it and exit?',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, _OnClose.stop),
+                  child: const Text('Stop agent and exit'),
+                ),
+                if (Platform.isWindows)
+                  FilledButton(
+                    autofocus: true,
+                    onPressed: () => Navigator.pop(ctx, _OnClose.tray),
+                    child: const Text('Keep running in tray'),
+                  ),
+              ],
+            ),
+          );
+    switch (choice) {
+      case _OnClose.tray:
+        await _window.invokeMethod<void>('hideToTray');
+        return AppExitResponse.cancel;
+      case _OnClose.stop:
+        await _c.target.stop();
+        return AppExitResponse.exit;
+      case null:
+        return AppExitResponse.cancel;
+    }
+  }
+
+  Future<void> _stopAndExit() async {
+    await _c.target.stop();
+    await ServicesBinding.instance.exitApplication(AppExitType.required);
   }
 
   @override
@@ -56,6 +123,7 @@ class _TargetAppState extends State<TargetApp> {
     return MaterialApp(
       title: 'idr',
       debugShowCheckedModeBanner: false,
+      navigatorKey: _nav,
       theme: idrTheme(),
       navigatorObservers: [TelemetryFlutter.routeObserver],
       home: ListenableBuilder(

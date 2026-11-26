@@ -1380,7 +1380,7 @@ class IdrTarget {
       return;
     }
     // The GUI and `idr` share this Target: only one of them runs its agent.
-    if (await _agentRunningElsewhere()) {
+    if (await agentRunningElsewhere()) {
       idrLog('startAgent: stop — target-agent already running (GUI or idr)');
       _setAttention(const IdrTargetAttention(
         code: IdrTargetErrorCode.agentAlreadyRunning,
@@ -1406,10 +1406,11 @@ class IdrTarget {
     idrLog('startAgent: agent status=${_agent.status}');
   }
 
-  /// Whether a target-agent of this user already answers on its local IPC.
+  /// Whether a target-agent this SDK did not start (e.g. `idr start` while the
+  /// GUI is open) already answers on its local IPC. False while ours runs.
   /// ponytail: the IPC endpoint exists only with file transfer on; with it
   /// off a second agent isn't detected.
-  Future<bool> _agentRunningElsewhere() async {
+  Future<bool> agentRunningElsewhere() async {
     if (_agent.status != AgentRuntimeStatus.stopped) return false;
     final ipc = AgentIpc(
       agent: 'target-agent',

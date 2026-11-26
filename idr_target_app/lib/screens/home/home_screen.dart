@@ -184,6 +184,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
 IdrStatus _statusOf(TargetController c) {
   if (c.awaitingApproval) return IdrStatus.warning;
+  if (c.agentElsewhere) return IdrStatus.online;
   return switch (c.state.status) {
     IdrTargetStatus.running => IdrStatus.online,
     IdrTargetStatus.starting ||
@@ -200,6 +201,7 @@ IdrStatus _statusOf(TargetController c) {
 
 String _statusLabel(TargetController c) {
   if (c.awaitingApproval) return 'Awaiting approval';
+  if (c.agentElsewhere) return 'Serving (idr CLI)';
   return switch (c.state.status) {
     IdrTargetStatus.running => 'Serving',
     IdrTargetStatus.needsAttention => 'Needs attention',
@@ -425,6 +427,15 @@ class OverviewSection extends StatelessWidget {
   Widget _primaryAction(BuildContext context) {
     final c = controller;
     if (c.awaitingApproval) return const SizedBox.shrink();
+    if (c.agentElsewhere) {
+      // The agent belongs to the `idr start` terminal; stop it there.
+      return const IdrButton(
+        label: 'Stop with Ctrl+C in idr',
+        variant: IdrButtonVariant.secondary,
+        icon: Icons.terminal,
+        onPressed: null,
+      );
+    }
     if (c.agentRunning || c.state.status == IdrTargetStatus.starting) {
       return IdrButton(
         label: 'Stop',
