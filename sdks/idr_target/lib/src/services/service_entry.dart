@@ -15,6 +15,8 @@ class IdrServiceEntry {
     this.credentialMode = 'source',
     this.requireUpstreamTls,
     this.label,
+    this.webPath,
+    this.webAccess = 'private',
   });
 
   String name;
@@ -31,6 +33,14 @@ class IdrServiceEntry {
 
   /// Optional human display label (e.g. `Ollama`); [name] remains the stream id.
   String? label;
+
+  /// Browser path on this Target's web address (`/` or `/name`); null = not on the web.
+  String? webPath;
+
+  /// `private` (access key required) or `public` (anyone with the link).
+  String webAccess;
+
+  bool get onWeb => webPath != null;
 
   String get endpoint {
     if (type == 'tcp') {
@@ -66,6 +76,8 @@ class IdrServiceEntry {
         if (requireUpstreamTls != null)
           'requireUpstreamTls': requireUpstreamTls,
         if (label != null) 'label': label,
+        if (webPath != null) 'webPath': webPath,
+        'webAccess': webAccess,
       };
 
   factory IdrServiceEntry.fromJson(Map<String, dynamic> j) => IdrServiceEntry(
@@ -81,5 +93,7 @@ class IdrServiceEntry {
         credentialMode: j['credentialMode'] as String? ?? 'source',
         requireUpstreamTls: j['requireUpstreamTls'] as bool?,
         label: j['label'] as String?,
+        webPath: j['webPath'] as String?,
+        webAccess: j['webAccess'] as String? ?? 'private',
       );
 }

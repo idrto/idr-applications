@@ -133,6 +133,48 @@ class ServicesManager {
     }
   }
 
+  /// Serve [name] to browsers at [path] (`null` = off). HTTP services only.
+  /// Returns null on success, else the validation message.
+  Future<String?> setWeb(String name,
+      {String? path, String access = 'private'}) async {
+    final s = _services.where((e) => e.name == name).firstOrNull;
+    if (s == null) return 'Unknown service';
+    if (path != null) {
+      if (s.type != 'http') {
+        return 'Only HTTP services can be opened in a browser';
+      }
+      if (!(s.baseUrl ?? '').startsWith('http://')) {
+        return 'Browser access needs an http:// endpoint';
+      }
+      final norm = normalizeWebPath(path);
+      if (norm == null) return 'Use a path like / or /ollama';
+      if (_services.any((e) => e.name != name && e.webPath == norm)) {
+        return '$norm is already used by another service';
+      }
+      path = norm;
+    }
+    if (access != 'private' && access != 'public') return 'Unknown access';
+    s
+      ..webPath = path
+      ..webAccess = access;
+    await persist();
+    _onChange?.call();
+    return null;
+  }
+
+  /// `ollama`, `/ollama/` -> `/ollama`; empty -> `/`. Null when invalid
+  /// (same rule as the agent's `web_path`).
+  static String? normalizeWebPath(String raw) {
+    final t = raw.trim().replaceAll(RegExp(r'^/+|/+$'), '');
+    if (t.isEmpty) return '/';
+    final parts = t.split('/');
+    if (!RegExp(r'^[A-Za-z0-9._/-]+$').hasMatch(t) ||
+        parts.any((p) => p.isEmpty || p == '.' || p == '..')) {
+      return null;
+    }
+    return '/$t';
+  }
+
   /// Scan listening loopback ports; omit hits already configured.
   Future<List<ScanHit>> scanExposable() async {
     final hits = await PortScanner.scanListening();

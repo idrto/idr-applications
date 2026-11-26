@@ -1,13 +1,56 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:idr_target/idr_target.dart';
 
+import 'package:flutter/services.dart';
+
 import '../../target/target_controller.dart';
 import '../../ui/index.dart';
+import '../../widgets/common.dart';
 
-class ServicesSection extends StatelessWidget {
+class ServicesSection extends StatefulWidget {
   const ServicesSection({super.key, required this.controller});
 
   final TargetController controller;
+
+  @override
+  State<ServicesSection> createState() => _ServicesSectionState();
+}
+
+class _ServicesSectionState extends State<ServicesSection> {
+  TargetController get controller => widget.controller;
+
+  /// Verified custom domains (browser addresses) and the private-access key.
+  List<String> _webDomains = const [];
+  String? _accessKey;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadWeb();
+  }
+
+  Future<void> _loadWeb() async {
+    final domains = await controller.domains() ?? const [];
+    final key = await controller.target.webAccessKey();
+    if (!mounted) return;
+    setState(() {
+      _webDomains = [
+        for (final d in domains)
+          if (d.verified) d.domain,
+      ];
+      _accessKey = key;
+    });
+  }
+
+  /// Browser link for [s]; private links carry the key once (it becomes a cookie).
+  String? _link(IdrServiceEntry s) {
+    if (_webDomains.isEmpty || s.webPath == null) return null;
+    final path = s.webPath == '/' ? '/' : '${s.webPath}/';
+    final base = 'https://${_webDomains.first}$path';
+    return s.webAccess == 'private' && _accessKey != null
+        ? '$base?idr_key=$_accessKey'
+        : base;
+  }
 
   IdrServiceKind _kind(IdrServiceEntry s) {
     final n = '${s.name} ${s.label ?? ''}'.toLowerCase();
@@ -47,6 +90,7 @@ class ServicesSection extends StatelessWidget {
             ],
           ),
         ),
+        if (services.any((s) => s.onWeb)) _browserCard(c),
         if (services.isEmpty)
           IdrCard(
             child: IdrEmpty(
@@ -66,50 +110,64 @@ class ServicesSection extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 8),
             child: IdrCard(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  IdrServiceIcon(kind: _kind(s), size: 32),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+                  Row(
+                    children: [
+                      IdrServiceIcon(kind: _kind(s), size: 32),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(s.name, style: IdrText.display(size: 14)),
-                            const SizedBox(width: 8),
-                            IdrTag(label: s.type.toUpperCase(), caps: false),
+                            Row(
+                              children: [
+                                Text(s.name, style: IdrText.display(size: 14)),
+                                const SizedBox(width: 8),
+                                IdrTag(
+                                  label: s.type.toUpperCase(),
+                                  caps: false,
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              s.endpoint,
+                              style: IdrText.mono(
+                                size: 11,
+                                color: IdrColors.zinc500,
+                              ),
+                            ),
                           ],
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          s.endpoint,
-                          style: IdrText.mono(
-                            size: 11,
-                            color: IdrColors.zinc500,
-                          ),
+                      ),
+                      Text(
+                        s.enabled ? 'Published' : 'Paused',
+                        style: IdrText.body(size: 12, color: IdrColors.zinc500),
+                      ),
+                      const SizedBox(width: 8),
+                      Switch(
+                        value: s.enabled,
+                        onChanged: c.busy
+                            ? null
+                            : (_) => c.toggleService(s.name),
+                      ),
+                      IconButton(
+                        tooltip: 'Remove',
+                        onPressed: c.busy ? null : () => _remove(context, s),
+                        icon: const Icon(
+                          Icons.delete_outline,
+                          size: 18,
+                          color: IdrColors.zinc400,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  Text(
-                    s.enabled ? 'Published' : 'Paused',
-                    style: IdrText.body(size: 12, color: IdrColors.zinc500),
-                  ),
-                  const SizedBox(width: 8),
-                  Switch(
-                    value: s.enabled,
-                    onChanged: c.busy ? null : (_) => c.toggleService(s.name),
-                  ),
-                  IconButton(
-                    tooltip: 'Remove',
-                    onPressed: c.busy ? null : () => _remove(context, s),
-                    icon: const Icon(
-                      Icons.delete_outline,
-                      size: 18,
-                      color: IdrColors.zinc400,
-                    ),
-                  ),
+                  if (s.type == 'http') ...[
+                    const SizedBox(height: 10),
+                    _webRow(context, s),
+                  ],
                 ],
               ),
             ),
@@ -126,6 +184,183 @@ class ServicesSection extends StatelessWidget {
           ),
       ],
     );
+  }
+
+  /// Address, access key and certificate state for browser access.
+  Widget _browserCard(TargetController c) {
+    final staging = _webDomains.any(
+      (d) => c.target.acmeStatus(d)?.staging ?? false,
+    );
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: IdrCard(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Browser access', style: IdrText.display(size: 14)),
+            const SizedBox(height: 4),
+            Text(
+              'Public services open for anyone with the link. Private services ask for the access key; copied private links include it.',
+              style: IdrText.body(size: 12, color: IdrColors.zinc500),
+            ),
+            const SizedBox(height: 12),
+            if (_webDomains.isEmpty)
+              const IdrAlert(
+                tone: IdrTone.warning,
+                title: 'No verified custom domain yet',
+                message: 'Add one under Domains to get a browser address.',
+              )
+            else
+              for (final d in _webDomains)
+                CopyValue(value: 'https://$d', label: 'Address'),
+            if (_accessKey != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Text(
+                    'Access key  ',
+                    style: IdrText.body(size: 12, color: IdrColors.zinc500),
+                  ),
+                  Flexible(
+                    child: CopyValue(value: _accessKey!, label: 'Access key'),
+                  ),
+                ],
+              ),
+            ],
+            if (staging) ...[
+              const SizedBox(height: 12),
+              const IdrAlert(
+                tone: IdrTone.warning,
+                title: 'Test certificate',
+                message: 'The certificate is from Let\'s Encrypt staging, so browsers show a warning until a production certificate is issued.',
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Off / Private / Public, the path, and Copy link for one HTTP service.
+  Widget _webRow(BuildContext context, IdrServiceEntry s) {
+    final c = controller;
+    final mode = s.webPath == null ? 'off' : s.webAccess;
+    final link = _link(s);
+    return Row(
+      children: [
+        const Icon(Icons.public, size: 16, color: IdrColors.zinc400),
+        const SizedBox(width: 8),
+        Text(
+          'Browser',
+          style: IdrText.body(size: 12, color: IdrColors.zinc500),
+        ),
+        const SizedBox(width: 12),
+        SizedBox(
+          width: 150,
+          child: IdrSelect<String>(
+            value: mode,
+            options: const [
+              IdrOption(value: 'off', label: 'Off'),
+              IdrOption(value: 'private', label: 'Private (key)'),
+              IdrOption(value: 'public', label: 'Public'),
+            ],
+            onChanged: c.busy
+                ? null
+                : (v) => _setWeb(
+                    context,
+                    s,
+                    path: v == 'off' ? null : (s.webPath ?? '/${s.name}'),
+                    access: v == 'off' ? s.webAccess : v,
+                  ),
+          ),
+        ),
+        if (s.webPath != null) ...[
+          const SizedBox(width: 12),
+          Text(s.webPath!, style: IdrText.mono(size: 12)),
+          IconButton(
+            tooltip: 'Change path',
+            onPressed: c.busy ? null : () => _editPath(context, s),
+            icon: const Icon(
+              Icons.edit_outlined,
+              size: 16,
+              color: IdrColors.zinc400,
+            ),
+          ),
+        ],
+        const Spacer(),
+        if (link != null)
+          TextButton.icon(
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(text: link));
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Link copied'),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+              }
+            },
+            icon: const Icon(Icons.link, size: 16),
+            label: Text(
+              s.webAccess == 'private' ? 'Copy private link' : 'Copy link',
+            ),
+          ),
+      ],
+    );
+  }
+
+  Future<void> _setWeb(
+    BuildContext context,
+    IdrServiceEntry s, {
+    String? path,
+    required String access,
+  }) async {
+    final err = await controller.setServiceWeb(
+      s.name,
+      path: path,
+      access: access,
+    );
+    if (err != null && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
+    }
+  }
+
+  Future<void> _editPath(BuildContext context, IdrServiceEntry s) async {
+    final field = TextEditingController(text: s.webPath);
+    final path = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Browser path for ${s.name}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            IdrTextField(controller: field, mono: true, hint: '/${s.name}'),
+            const SizedBox(height: 8),
+            Text(
+              'Use / for a website (it gets every path no other service uses), or /name for an app or API.',
+              style: IdrText.body(size: 12, color: IdrColors.zinc500),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, field.text),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    field.dispose();
+    if (path != null && context.mounted) {
+      await _setWeb(context, s, path: path, access: s.webAccess);
+    }
   }
 
   Future<void> _remove(BuildContext context, IdrServiceEntry s) async {

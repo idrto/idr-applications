@@ -33,6 +33,7 @@ class TomlWriter {
     this.fileTransferDataDir,
     this.fileTransferInteractive = true,
     this.fileTransferPermittedDirs = const [],
+    this.webAccessKey,
   });
 
   final String fqhn;
@@ -73,6 +74,9 @@ class TomlWriter {
   final String? fileTransferDataDir;
   final bool fileTransferInteractive;
   final List<String> fileTransferPermittedDirs;
+
+  /// `[web].access_key` for private browser services.
+  final String? webAccessKey;
 
   String toToml() {
     // Presence identity is `host--entity.idr.to` (email `@` ok) or classic dotted DNS.
@@ -196,6 +200,14 @@ class TomlWriter {
         ..writeln();
     }
 
+    final key = webAccessKey;
+    if (key != null && services.any((s) => s.onWeb)) {
+      buf
+        ..writeln('[web]')
+        ..writeln('access_key = "${_esc(key)}"')
+        ..writeln();
+    }
+
     for (final s in services) {
       buf
         ..writeln('[[services]]')
@@ -214,6 +226,11 @@ class TomlWriter {
       buf.writeln('credential_mode = "${_esc(s.credentialMode)}"');
       if (s.requireUpstreamTls != null) {
         buf.writeln('require_upstream_tls = ${s.requireUpstreamTls}');
+      }
+      if (s.webPath != null) {
+        buf
+          ..writeln('web_path = "${_esc(s.webPath!)}"')
+          ..writeln('web_access = "${_esc(s.webAccess)}"');
       }
       final env = s.authEnvVar?.trim();
       if (env != null && env.isNotEmpty) {

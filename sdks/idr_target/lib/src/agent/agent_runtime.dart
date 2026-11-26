@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:path/path.dart' as p;
 
@@ -19,6 +21,23 @@ import 'toml_writer.dart';
 /// `acme-status.json`) under the SDK config dir.
 String acmeCertDir(Directory configDir) =>
     p.join(configDir.path, 'acme', 'certs');
+
+/// Key for private browser services (`[web].access_key`), created on first
+/// use in `web-access.key` under the SDK config dir.
+Future<String> ensureWebAccessKey(Directory configDir) async {
+  final f = File(p.join(configDir.path, 'web-access.key'));
+  if (f.existsSync()) {
+    final k = (await f.readAsString()).trim();
+    if (k.length >= 16) return k;
+  }
+  final rnd = Random.secure();
+  final key = base64Url
+      .encode(List<int>.generate(24, (_) => rnd.nextInt(256)))
+      .replaceAll('=', '');
+  await f.parent.create(recursive: true);
+  await f.writeAsString(key);
+  return key;
+}
 
 /// Writes TOML, starts/stops `target-agent`, and runs the health monitor.
 class AgentRuntime {
@@ -146,6 +165,8 @@ class AgentRuntime {
       fileTransferDataDir: p.join(dir.path, 'transfers'),
       fileTransferInteractive: config.fileTransfer.interactive,
       fileTransferPermittedDirs: config.fileTransfer.permittedDirs,
+      webAccessKey:
+          services.any((s) => s.onWeb) ? await ensureWebAccessKey(dir) : null,
     );
     final toml = await idrTimed('config_write', () => writer.writeTo(dir));
     _configPath = toml.path;

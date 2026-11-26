@@ -695,6 +695,15 @@ class IdrTarget {
 
   Future<void> toggleService(String name) => _services.toggle(name);
 
+  /// Open [name] in browsers at [path] (`null` = off) on this Target's web
+  /// addresses. [access] is `private` (access key) or `public`.
+  Future<String?> setServiceWeb(String name,
+          {String? path, String access = 'private'}) =>
+      _services.setWeb(name, path: path, access: access);
+
+  /// Key that opens private browser services (created on first use).
+  Future<String> webAccessKey() => ensureWebAccessKey(configDir);
+
   Future<List<ScanHit>> scanExposableServices() => _services.scanExposable();
 
   Future<int> exposeScanHits(Iterable<ScanHit> hits) =>

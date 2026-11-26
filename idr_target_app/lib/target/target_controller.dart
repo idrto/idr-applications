@@ -718,6 +718,17 @@ class TargetController extends ChangeNotifier {
   Future<void> toggleService(String name) =>
       run('Updating $name', () => target.toggleService(name));
 
+  /// Browser access for [name]: [path] null = off. Null on success, else why not.
+  Future<String?> setServiceWeb(
+    String name, {
+    String? path,
+    String access = 'private',
+  }) async {
+    final err = await target.setServiceWeb(name, path: path, access: access);
+    notifyListeners();
+    return err;
+  }
+
   // --- Custom domains (idr provider domain) ------------------------------------
 
   Future<List<CustomDomain>?> domains() async {
